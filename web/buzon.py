@@ -72,8 +72,8 @@ def anonymize_text(text: str) -> str:
         cleaned = pattern.sub("[INFORMACIÓN PERSONAL]", cleaned)
 
     # Sustituciones extra para frases típicas de identificación personal.
-    cleaned = re.sub(r"(?i)\b(?:mi\s+)?nombre\s+es\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+){0,3}\b", "[NOMBRE]", cleaned)
-    cleaned = re.sub(r"(?i)\b(?:vivo\s+en|resido\s+en|mi\s+vivienda\s+es|domicilio\s*[:\-]?\s*)[^\n,.;]{0,80}", "[DIRECCIÓN]", cleaned)
+    #cleaned = re.sub(r"(?i)\b(?:mi\s+)?nombre\s+es\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+){0,3}\b", "[NOMBRE]", cleaned)
+    #cleaned = re.sub(r"(?i)\b(?:vivo\s+en|resido\s+en|mi\s+vivienda\s+es|domicilio\s*[:\-]?\s*)[^\n,.;]{0,80}", "[DIRECCIÓN]", cleaned)
     return cleaned.strip()
 
 
@@ -193,7 +193,13 @@ def generate_outputs(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Procesa sugerencias del buzón virtual de educación.")
-    parser.add_argument("input_file", type=Path, help="Ruta al archivo Excel/CSV de entrada.")
+    parser.add_argument(
+        "input_file",
+        nargs="?",
+        type=Path,
+        default=Path("entrada"),
+        help="Archivo Excel/CSV a procesar o carpeta entrada con varios documentos.",
+    )
     parser.add_argument(
         "--output-dir",
         type=Path,
@@ -203,8 +209,34 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def process_folder(input_dir: Path, output_dir: Path) -> None:
+    files = sorted(
+        [p for p in input_dir.iterdir() if p.is_file() and p.suffix.lower() in {".csv", ".xlsx", ".xls"}],
+        key=lambda p: p.name.lower(),
+    )
+    if not files:
+        raise FileNotFoundError(f"No se encontraron archivos Excel/CSV en la carpeta: {input_dir}")
+
+    print(f"Se procesarán {len(files)} archivos desde {input_dir}")
+    for file_path in files:
+        file_output_dir = output_dir / file_path.stem
+        counts = generate_outputs(
+            input_path=file_path,
+            output_dir=file_output_dir,
+        )
+        print(f"Archivo: {file_path.name}")
+        for category, total in counts.items():
+            print(f"- {category}: {total}")
+        print(f"Salida: {file_output_dir}")
+
+
 def main() -> None:
     args = parse_args()
+
+    if args.input_file.is_dir():
+        process_folder(args.input_file, args.output_dir)
+        return
+
     if not args.input_file.exists():
         raise FileNotFoundError(f"No existe el archivo de entrada: {args.input_file}")
 
