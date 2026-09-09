@@ -1,0 +1,105 @@
+﻿Protocolo del buzón virtual de preocupaciones educativas
+Gestión centralizada por la Dirección Provincial de Educación de Ceuta
+1. Finalidad y modelo de gestión
+El buzón será un canal virtual único, centralizado y gestionado por la Dirección Provincial de Educación. Permitirá que la comunidad educativa de Ceuta comunique necesidades, incidencias y propuestas relativas a la educación en Ceuta durante la situación de emergencia.
+La decisión de centralizar la gestión en la Dirección Provincial es coherente con el objetivo de no añadir carga a los centros. La investigación sobre bienestar docente identifica carga y presión de tiempo como demandas laborales frecuentes. Centralizar la recepción también favorece una lectura transversal de problemas repetidos que superan la capacidad de un centro; para que sea eficaz, el buzón debe proporcionar una respuesta visible y no convertirse en una vía sin retorno.
+El buzón es un canal de mejora de la respuesta educativa ante la situación de emergencia que vive Ceuta en este momento, no un recurso clínico, de urgencias ni un sustituto de los procedimientos formales de prevención de riesgos, protección, acoso, disciplina o representación sindical.
+2. Qué puede comunicarse y qué debe evitarse
+Se admite
+	No se admite o se requiere un canal alternativo
+	• Carga de trabajo, tareas duplicadas, necesidades de sustitución o de coordinación.
+	• Emergencia o peligro inmediato: dirección del centro, 112 o autoridad/servicio competente.
+	• Riesgos de acceso, movilidad, instalaciones, organización u horarios.
+	• Atención psicológica o sanitaria individual.
+	• Necesidades de recursos, formación, interpretación o accesibilidad.
+	• Datos clínicos, diagnósticos, informes o detalles de tratamiento.
+	• Barreras para ejecutar las medidas de emergencia.
+	• Denuncias de acoso, violencia, protección o prevención de riesgos.
+	• Incidencias de convivencia o discriminación.
+	• Datos identificativos de alumnado, familias o personal que no sean imprescindibles.
+	• Propuestas de mejora y prácticas que estén funcionando.
+	• Incidencias que exijan respuesta inmediata: canal de urgencia del centro o de la autoridad competente.
+	3. Responsabilidades
+Responsable
+	Función
+	Dirección Provincial de Educación
+	Titular del proceso operativo: recibe, registra, clasifica, responde, escala y publica información agregada. Designa una unidad o equipo gestor y un responsable de protección de datos.
+	Equipo gestor local
+	Consulta el buzón cada día lectivo durante las dos primeras semanas y, después, al menos dos veces por semana; formula la respuesta inicial, coordina la derivación administrativa y mantiene el registro mínimo.
+	Direcciones de centro
+	No acceden al contenido del buzón. Ejecutan las medidas que la Dirección Provincial les comunique y facilitan los canales urgentes o procedimientos específicos cuando correspondan.
+	Coordinación de bienestar y protección
+	Difunde el canal, orienta sobre qué vía utilizar y facilita acceso a los recursos; no recibe ni custodia comunicaciones del buzón.
+	Foro de la Educación y servicios competentes
+	Reciben información sobre incidencias y obstáculos agregados o asuntos de ámbito interinstitucional para decidir recursos, seguridad, salud, protección o ajustes organizativos.
+	4. Diseño mínimo de la plataforma
+El acceso se realizará mediante un enlace único publicado en los canales oficiales de la Dirección Provincial y difundido por los centros. Permitirá comunicación anónima. Si se solicita respuesta individual, la persona podrá facilitar voluntariamente un correo o teléfono; esa información no se remitirá al centro salvo consentimiento expreso o aplicación de un procedimiento legal específico.
+Campos obligatorios:
+* Categoría del mensaje (opciones predefinidas)
+* Centro (lista desplegable)
+* Descripción breve
+* Carácter del asunto (ordinario / requiere respuesta pronta)
+* Propuesta, cuando proceda
+Campo opcional:
+* Datos de contacto
+Antes del envío, la plataforma mostrará un aviso de canal alternativo para urgencias, salud, protección y denuncias formales. Este diseño minimiza la información solicitada y facilita que el análisis se haga por categorías, no por perfiles personales. La configuración final de la plataforma requerirá validación por la persona responsable de protección de datos.
+5. Flujo de gestión y plazos objetivo
+Fase
+	Gestión provincial
+	Plazo objetivo
+	Recepción / Acuse
+	Registrar fecha, categoría, centro, estado y si se solicita contacto. No transcribir datos clínicos ni crear expedientes personales. Si la comunicación es identificada, confirmar recepción y recordar los canales de urgencia y atención profesional.
+	• Revisión diaria las dos primeras semanas; después, dos veces por semana.
+• Confirmación en máximo dos días lectivos.
+	Clasificación
+	Determinar si es resoluble por Dirección Provincial, requiere ejecución del centro, debe escalarse a otro servicio competente o procede redirigir a otro canal.
+	Tres días lectivos.
+	Respuesta inicial
+	Comunicar decisión, responsable y plazo de ejecución; si no procede, explicarlo de forma respetuosa y orientadora.
+	Cinco días lectivos.
+	Escalado
+	Elevar barreras sistémicas y riesgos relevantes al Foro de la Educación o al servicio competente.
+	En la reunión semanal o antes si el riesgo lo exige.
+	Cierre y aprendizaje
+	Clasificar: resuelta, en curso, derivada o no procede; registrar la razón y una acción de seguimiento si corresponde.
+	Tras la respuesta o derivación.
+	Retorno público agregado
+	Publicar categorías, volumen, respuestas en plazo, actuaciones iniciadas, asuntos pendientes y fecha de próxima revisión.
+	Semanal durante el primer mes; posteriormente, mensual.
+	6. Garantías de confidencialidad y protección de datos
+1. El equipo gestor provincial contará con acceso nominativo y limitado a las comunicaciones.
+2. El registro operativo conservará solo identificador interno, fecha, categoría, centro, estado, responsable y acción adoptada. Los datos de contacto se separarán del análisis agregado.
+3. Antes de activar la plataforma, la Dirección Provincial aprobará con la persona responsable de protección de datos: finalidad, base jurídica, roles de acceso, periodo de conservación, medidas de seguridad, información a usuarios y procedimiento de supresión/anonimización.
+4. Ningún informe para centros, CCE o comunidad educativa contendrá datos que permitan identificar a una persona o inferir su identidad en colectivos pequeños.
+5. El buzón no se usará para evaluar desempeño profesional, diagnosticar salud mental ni realizar seguimiento individual.
+7. Seguimiento y decisión
+La Dirección Provincial elaborará un cuadro semanal con:
+* Número de comunicaciones por categoría y centro.
+* Porcentaje de acuses y respuestas iniciales dentro de plazo.
+* Asuntos repetidos.
+* Tiempo de resolución.
+* Asuntos escalados.
+* Medidas adoptadas.
+* Barreras de accesibilidad.
+Los centros recibirán solo la información necesaria para ejecutar acciones; el Foro de la Educación analizará tendencias agregadas y decidirá refuerzos, ajustes o retirada de medidas.
+8. Texto de difusión al personal
+La Dirección Provincial de Educación pone a disposición de la comunidad educativa un buzón virtual único, confidencial y voluntario para comunicar preocupaciones, necesidades o incidencias en materia educativa durante la situación de emergencia. Puede utilizarse de forma anónima o con datos de contacto para recibir respuesta. No es un canal de urgencias, atención psicológica o sanitaria, denuncias formales ni comunicación de datos clínicos. Las comunicaciones identificadas recibirán acuse en un máximo de dos días lectivos y una respuesta inicial en un máximo de cinco. Cada semana se publicará información agregada sobre los temas recibidos y las actuaciones iniciadas, sin datos personales.
+
+
+9.Procesamiento de datos.
+
+
+Los datos se pasarán a un documento excel y, posteriormente, se procesarán con un script de python. Este script agregará cada sugerencia, creará un nuevo archivo de excel para cada categoría y eliminará cualquier mención de información personal de quién la escriba, como puede ser el nombre o vivienda.
+
+
+Las categorías en las que agregar las sugerencias serán las siguientes:
+* Urbanismo
+* Educación
+* Economía
+* Sanidad
+
+Para poder implementar este script se utilizará una API de un LLM, como puede ser la API de Gemini. Durante el periodo de implementación se usará una API de IA gratuita pero menos potente y una vez se tenga el código implementado se sustituirá por la de Gemini y se procederá a la realización de pruebas y fine tuning para garantizar que el LLM procese la información correctamente.
+
+
+La API gratuita se obtendrá de Open Router, una interfaz unificada que permite, a través de una única API key, utilizar cualquier modelo de IA.
+https://openrouter.ai/
