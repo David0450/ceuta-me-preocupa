@@ -124,21 +124,31 @@
   }
   .hero-wing{
     position:absolute;
-    right:-8%;
-    top:50%;
-    transform:translateY(-50%);
+    right:5%;
+    top:10%;
     width:640px;
     max-width:75%;
     opacity:0.16;
     pointer-events:none;
+    z-index:0;
   }
   .hero-inner{
     position:relative;
+    z-index:1;
     padding-block:64px 72px;
     display:flex;
     flex-direction:column;
     gap:20px;
     max-width:640px;
+  }
+  @media (max-width:639px){
+    .hero-wing{
+      top:18%;
+      right:-18%;
+      width:112vw;
+      max-width:none;
+      opacity:0.13;
+    }
   }
   .eyebrow{
     font-family:"Public Sans", sans-serif;
