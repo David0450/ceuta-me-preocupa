@@ -48,6 +48,10 @@
     --focus:#7EA2E0;
   }
 
+  html {
+    overscroll-behavior: none;
+  }
+
   *{box-sizing:border-box;}
   body{
     margin:0;
