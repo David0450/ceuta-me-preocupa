@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Landing del buzón ciudadano de preocupaciones de la Cátedra Ceuta-IATEB, con enlace al formulario de LimeSurvey.">
 <title>Ceuta Me Preocupa</title>
+<link rel="icon" type="image/svg+xml" href="paloma2.svg">
 <link rel="stylesheet" href="styles.css">
 <script defer src="script.js"></script>
 
@@ -30,6 +31,10 @@
 <path transform="translate(0,0)" fill="rgb(46,80,162)" d="M 999.158 680.572 C 1000.69 679.601 1002.65 679.582 1004.2 680.525 C 1005.75 681.467 1006.64 683.207 1006.49 685.018 C 1006.34 686.828 1005.17 688.397 1003.48 689.067 C 1001.19 689.978 998.572 688.992 997.451 686.789 C 996.33 684.587 997.069 681.893 999.158 680.572 z"/>
 
 </svg>
+    <div class="hero-flag" aria-hidden="true">
+      <img src="Flag_of_Ceuta.svg.webp" alt="">
+      <span>Ceuta, ciudad que escucha</span>
+    </div>
     <div class="wrap">
       <div class="hero-inner">
         <span class="eyebrow">Buzón ciudadano · Cátedra Ceuta-IATEB</span>
@@ -182,7 +187,7 @@
         <h2>Cuéntanos tu preocupación</h2>
         <p class="lede">Rellena solo lo que consideres necesario. No pedimos datos identificativos: el envío es anónimo salvo que dejes un contacto opcional al final.</p>
       </div>
-      <form class="buzon-form" action="https://surveys.ugr.es/index.php/881473?lang=es" method="get" target="_blank" novalidate>
+      <form class="buzon-form" method="post" target="_self" novalidate>
         <div class="form-grid">
           <div class="field">
             <label for="categoria">Categoría principal</label>
@@ -224,24 +229,13 @@
           <textarea id="resultado" name="resultado" rows="3" maxlength="500" placeholder="¿Qué te gustaría que ocurriera?"></textarea>
         </div>
 
-        <div class="field">
-          <label class="checkbox-line">
-            <input type="checkbox" id="privacidad" name="privacidad" required>
-            He leído y acepto la <a href="#">información de privacidad</a> y entiendo que esto no es una reclamación administrativa, no abre expediente y no sustituye a los canales de urgencia. <span class="req">*</span>
-          </label>
-        </div>
-
         <div class="field field-contact">
           <label for="contacto">Contacto opcional (solo si quieres respuesta individual)</label>
           <input type="text" id="contacto" name="contacto" placeholder="Correo o teléfono (opcional)">
         </div>
 
         <div class="form-actions">
-          <button type="submit" class="btn btn-accent">Enviar mi preocupación →</button>
-          <span class="hero-note form-note">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L4 5V11C4 16.5 7.4 21.2 12 22C16.6 21.2 20 16.5 20 11V5L12 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-            Se abrirá el cuestionario oficial en una nueva pestaña
-          </span>
+          <button class="btn btn-accent">Enviar mi preocupación</button>
         </div>
       </form>
     </div>
@@ -269,7 +263,6 @@
         <a href="https://catedras.ugr.es/iateb/" target="_blank" rel="noopener">Cátedra Ceuta-IATEB</a>
         <a href="https://www.ugr.es" target="_blank" rel="noopener">ugr.es</a>
         <a href="https://www.ceuta.es" target="_blank" rel="noopener">ceuta.es</a>
-        <a href="https://surveys.ugr.es/index.php/881473?lang=es" target="_blank" rel="noopener">Formulario</a>
       </div>
     </div>
   </div>
