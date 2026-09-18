@@ -6,7 +6,7 @@
 <meta name="description" content="Landing del buzón ciudadano de preocupaciones de la Cátedra Ceuta-IATEB, con enlace al formulario de LimeSurvey.">
 <title>Ceuta Me Preocupa</title>
 <link rel="stylesheet" href="styles.css">
-
+<script defer src="script.js"></script>
 
 </head>
 <body>
@@ -16,7 +16,7 @@
       <img src="data:image/webp;base64,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" alt="Cátedra Ceuta-IATEB" />
       <span>Ceuta Me Preocupa</span>
     </div>
-    <a class="btn btn-accent btn-sm" href="https://surveys.ugr.es/index.php/881473?lang=es" target="_blank" rel="noopener">Enviar mi preocupación</a>
+    <a class="btn btn-accent btn-sm" href="#formulario">Enviar mi preocupación</a>
   </div>
 </header>
 
@@ -36,7 +36,7 @@
         <h1>Ceuta me preocupa</h1>
         <p class="lead">En el contexto de emergencia que atraviesa la ciudad, la Cátedra Ceuta-IATEB abre este canal para que cuentes, con tus propias palabras, qué preocupaciones, incidencias no urgentes o propuestas de mejora tienes sobre la gestión pública de Ceuta. Tu respuesta se suma a las demás para construir un retrato agregado y verificable de lo que preocupa a la ciudad.</p>
         <div class="hero-actions">
-          <a class="btn btn-accent" href="https://surveys.ugr.es/index.php/881473?lang=es" target="_blank" rel="noopener">Contar mi preocupación →</a>
+          <a class="btn btn-accent" href="#formulario">Contar mi preocupación →</a>
           <span class="hero-note">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L4 5V11C4 16.5 7.4 21.2 12 22C16.6 21.2 20 16.5 20 11V5L12 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
             Cuestionario anónimo · unos 5 minutos
@@ -175,13 +175,85 @@
     </div>
   </section>
 
+  <section id="formulario">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">Formulario</span>
+        <h2>Cuéntanos tu preocupación</h2>
+        <p class="lede">Rellena solo lo que consideres necesario. No pedimos datos identificativos: el envío es anónimo salvo que dejes un contacto opcional al final.</p>
+      </div>
+      <form class="buzon-form" action="https://surveys.ugr.es/index.php/881473?lang=es" method="get" target="_blank" novalidate>
+        <div class="form-grid">
+          <div class="field">
+            <label for="categoria">Categoría principal</label>
+            <select id="categoria" name="categoria" required>
+              <option value="" selected disabled>Selecciona una categoría</option>
+              <option value="urbanismo">Urbanismo</option>
+              <option value="movilidad">Movilidad</option>
+              <option value="educacion">Educación no universitaria</option>
+              <option value="universidad">Universidad</option>
+              <option value="economia">Economía</option>
+              <option value="sanidad">Sanidad</option>
+              <option value="seguridad">Seguridad</option>
+              <option value="servicios-sociales">Servicios Sociales</option>
+              <option value="medioambiente">Medioambiente</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="subcategoria">Subcategoría</label>
+            <input type="text" id="subcategoria" name="subcategoria" placeholder="Ej.: licencias, tráfico, becas…">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="zona">Zona aproximada o barrio</label>
+          <input type="text" id="zona" name="zona" placeholder="Ej.: Príncipe Alfonso, centro…" disabled>
+          <label class="checkbox-line">
+            <input type="checkbox" id="zona-omitir" checked>
+            No deseo indicarlo
+          </label>
+        </div>
+
+        <div class="field">
+          <label for="descripcion">¿Qué problema observa o qué propuesta plantea? <span class="req">*</span></label>
+          <textarea id="descripcion" name="descripcion" rows="5" maxlength="1000" required placeholder="Describe brevemente tu preocupación o propuesta (máximo 1.000 caracteres)"></textarea>
+        </div>
+
+        <div class="field">
+          <label for="resultado">Resultado esperado o propuesta de mejora (opcional)</label>
+          <textarea id="resultado" name="resultado" rows="3" maxlength="500" placeholder="¿Qué te gustaría que ocurriera?"></textarea>
+        </div>
+
+        <div class="field">
+          <label class="checkbox-line">
+            <input type="checkbox" id="privacidad" name="privacidad" required>
+            He leído y acepto la <a href="#">información de privacidad</a> y entiendo que esto no es una reclamación administrativa, no abre expediente y no sustituye a los canales de urgencia. <span class="req">*</span>
+          </label>
+        </div>
+
+        <div class="field field-contact">
+          <label for="contacto">Contacto opcional (solo si quieres respuesta individual)</label>
+          <input type="text" id="contacto" name="contacto" placeholder="Correo o teléfono (opcional)">
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-accent">Enviar mi preocupación →</button>
+          <span class="hero-note form-note">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L4 5V11C4 16.5 7.4 21.2 12 22C16.6 21.2 20 16.5 20 11V5L12 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+            Se abrirá el cuestionario oficial en una nueva pestaña
+          </span>
+        </div>
+      </form>
+    </div>
+  </section>
+
   <section class="cta-final">
     <div class="wrap">
       <div>
         <h2>Tu preocupación cuenta.</h2>
         <p>Cinco minutos tuyos hoy pueden formar parte del retrato de Ceuta mañana.</p>
       </div>
-      <a class="btn btn-accent" href="https://surveys.ugr.es/index.php/881473?lang=es" target="_blank" rel="noopener">Ir al formulario →</a>
+      <a class="btn btn-accent" href="#formulario">Ir al formulario →</a>
     </div>
   </section>
 </main>

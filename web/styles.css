@@ -336,6 +336,86 @@
   .footer-links a{color:var(--ink-soft); text-decoration:underline; text-decoration-color:var(--line); text-underline-offset:3px;}
   .footer-links a:hover{color:var(--primary);}
 
+  /* FORMULARIO */
+  .buzon-form{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:32px;
+    display:flex;
+    flex-direction:column;
+    gap:22px;
+    max-width:760px;
+  }
+  .form-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:22px;
+  }
+  @media (min-width:640px){ .form-grid{grid-template-columns:1fr 1fr;} }
+  .field{display:flex; flex-direction:column; gap:8px;}
+  .field label{
+    font-weight:600;
+    font-size:0.92rem;
+    color:var(--ink);
+  }
+  .field .req{color:var(--accent);}
+  .field input[type="text"],
+  .field select,
+  .field textarea{
+    font-family:"Public Sans", sans-serif;
+    font-size:0.95rem;
+    color:var(--ink);
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px 14px;
+    resize:vertical;
+    width:100%;
+  }
+  .field input[type="text"]:disabled{
+    opacity:0.6;
+    cursor:not-allowed;
+  }
+  .field input:focus-visible,
+  .field select:focus-visible,
+  .field textarea:focus-visible{
+    outline:3px solid var(--focus);
+    outline-offset:1px;
+  }
+  .checkbox-line{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    font-weight:400 !important;
+    font-size:0.92rem;
+    color:var(--ink-soft);
+    line-height:1.5;
+  }
+  .checkbox-line input[type="checkbox"]{
+    margin-top:3px;
+    flex:none;
+    width:18px;
+    height:18px;
+    accent-color:var(--primary);
+  }
+  .checkbox-line a{
+    color:var(--primary);
+    text-decoration:underline;
+    text-underline-offset:2px;
+  }
+  .field-contact{
+    border-top:1px solid var(--line);
+    padding-top:22px;
+  }
+  .form-actions{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:16px;
+  }
+  .form-note{color:var(--ink-faint);}
+
   @media (prefers-reduced-motion: reduce){
     *{transition:none !important;}
   }
