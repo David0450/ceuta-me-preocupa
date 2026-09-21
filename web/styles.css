@@ -15,8 +15,8 @@
     --wing:#8DB9F2;
     --focus:#2B509E;
   }
-  :root:not([data-theme="light"]){
-    @media (prefers-color-scheme: dark){
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
       --bg:#0E1521;
       --surface:#16202F;
       --surface-2:#1C2839;
@@ -76,6 +76,7 @@
     position:sticky;
     top:env(safe-area-inset-top, 0px);
     z-index:20;
+    background:var(--surface);
     background:color-mix(in srgb, var(--surface) 88%, transparent);
     backdrop-filter:blur(8px);
     border-bottom:1px solid var(--line);
@@ -138,7 +139,7 @@
   }
   .hero-flag{
     position:absolute;
-    z-index:0;
+    z-index:1;
     right:5%;
     top:50%;
     width:min(38vw, 430px);
@@ -185,7 +186,7 @@
       bottom:18px;
       width:68vw;
       transform:rotate(3deg);
-      opacity:.2;
+      opacity:.72;
       border-width:4px;
       box-shadow:none;
     }
@@ -383,6 +384,7 @@
     flex-direction:column;
     gap:22px;
     max-width:760px;
+    box-shadow:0 18px 40px rgba(21,44,87,.08);
   }
   .form-grid{
     display:grid;

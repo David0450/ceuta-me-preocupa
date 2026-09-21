@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" role="img" aria-label="Bandera de Ceuta">
+  <rect width="600" height="400" fill="#fff"/>
+  <rect width="300" height="200" fill="#111"/>
+  <rect x="300" y="200" width="300" height="200" fill="#111"/>
+  <rect x="300" width="300" height="200" fill="#fff"/>
+  <rect y="200" width="300" height="200" fill="#fff"/>
+  <circle cx="300" cy="200" r="72" fill="#c62828" stroke="#fff" stroke-width="10"/>
+  <path d="M300 143l16 38 41 3-31 26 10 40-36-22-36 22 10-40-31-26 41-3z" fill="#f4c542"/>
+</svg>
