@@ -6,22 +6,20 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('suggestions', function (Blueprint $table) {
+        Schema::create('subcategorias', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('categoria_id')
+                  ->constrained('categorias')
+                  ->cascadeOnDelete();
+            $table->string('nombre');
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('suggestions');
+        Schema::dropIfExists('subcategorias');
     }
 };

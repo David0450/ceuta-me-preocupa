@@ -1,0 +1,91 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Sugerencia;
+use App\Http\Requests\GuardarSugerenciaRequest;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+class SugerenciaController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
+    {
+        //
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(GuardarSugerenciaRequest $request)
+    {
+        $datos = $request->validated();
+
+        DB::transaction(function () use ($datos) {
+            // 1. La sugerencia: registro de trabajo, SIN datos personales.
+            $sugerencia = Sugerencia::create([
+                'fecha_recepcion'          => now(),
+                'categoria_id'             => $datos['categoria_id'],
+                'estado'                   => 'recibido',
+                'version_aviso_privacidad' => 'v1', // llévalo a config cuando cambie el aviso
+                'fecha_aceptacion'         => now(),
+                // texto_desidentificado y organismo_id quedan a null:
+                // se rellenan después, en los pasos de anonimización y clasificación.
+            ]);
+
+            // 2. Subcategorías (1 o 2) en la tabla pivote.
+            $sugerencia->subcategorias()->sync($datos['subcategorias']);
+
+            // 3. Datos originales: tabla sensible, acceso restringido.
+            $sugerencia->datoOriginal()->create([
+                'texto_original'               => $datos['descripcion'],
+                'resultado_esperado_original'  => $datos['resultado_esperado'] ?? null,
+                'organismo_sugerido_ciudadano' => $datos['organismo_sugerido_ciudadano'] ?? null,
+                'zona_origen'                  => $datos['zona'] ?? null,
+            ]);
+
+            // 4. Contacto: solo si la persona lo dejó (implica que quiere respuesta).
+            //    El canal se cifra solo, por el cast 'encrypted' del modelo Contacto.
+            if (! empty($datos['contacto'])) {
+                $sugerencia->contacto()->create([
+                    'canal'                => $datos['contacto'],
+                    'consiente_respuesta'  => true,
+                    'fecha_consentimiento' => now(),
+                ]);
+            }
+        });
+
+        // Formulario clásico (vista renderizada por Laravel): volvemos con un aviso.
+        // Si el envío fuera por fetch/AJAX, cambia esto por:
+        //   return response()->json(['mensaje' => '...'], 201);
+        return back()->with('exito', 'Tu sugerencia se ha registrado correctamente. Gracias por participar.');
+    }
+
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(Sugerencia $sugerencia)
+    {
+        //
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, Sugerencia $sugerencia)
+    {
+        //
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(Sugerencia $sugerencia)
+    {
+        //
+    }
+}
