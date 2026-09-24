@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Sugerencia;
+use App\Models\Categoria;
 use App\Http\Requests\GuardarSugerenciaRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -87,5 +88,16 @@ class SugerenciaController extends Controller
     public function destroy(Sugerencia $sugerencia)
     {
         //
+    }
+
+    public function create()
+    {
+        $categorias = Categoria::with('subcategorias')->orderBy('nombre')->get();
+
+        $subcategoriasPorCategoria = $categorias->mapWithKeys(fn ($c) => [
+            $c->id => $c->subcategorias->map(fn ($s) => ['id' => $s->id, 'nombre' => $s->nombre])->values(),
+        ]);
+
+        return view('index', compact('categorias', 'subcategoriasPorCategoria'));
     }
 }
