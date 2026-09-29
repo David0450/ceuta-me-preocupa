@@ -16,7 +16,7 @@
                 <h3 class="font-semibold text-lg mb-4">Ficha</h3>
                 <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div><dt class="text-gray-500">Fecha de recepción</dt><dd>{{ $sugerencia->fecha_recepcion?->format('d/m/Y H:i') }}</dd></div>
-                    <div><dt class="text-gray-500">Estado</dt><dd>{{ ucfirst($sugerencia->estado) }}</dd></div>
+                    <div><dt class="text-gray-500 mb-1">Estado</dt><dd><livewire:estado-sugerencia :sugerencia="$sugerencia" /></dd></div>
                     <div><dt class="text-gray-500">Categoría</dt><dd>{{ $sugerencia->categoria->nombre }}</dd></div>
                     <div><dt class="text-gray-500">Subcategorías</dt><dd>{{ $sugerencia->subcategorias->pluck('nombre')->join(', ') ?: '—' }}</dd></div>
                     <div><dt class="text-gray-500">Organismo</dt><dd>{{ $sugerencia->organismo?->nombre ?? '—' }}</dd></div>
