@@ -165,10 +165,10 @@
       <div class="section-head">
         <span class="kicker">Quién impulsa esto</span>
         <h2>La Cátedra Ceuta-IATEB</h2>
-        <p class="lede">La Cátedra UGR - Ciudad Autónoma de Ceuta en Inteligencia Artificial y Tecnologías Emergentes 
-          para el Bienestar (Cátedra CEUTA-IATEB) es una iniciativa conjunta entre la Universidad de Granada y la Ciudad 
-          Autónoma de Ceuta. Su objetivo es convertirse en un núcleo relevante para la investigación, la formación y la 
-          transferencia de conocimiento en el ámbito de la Inteligencia Artificial y las Tecnologías Emergentes aplicadas a la 
+        <p class="lede">La Cátedra UGR - Ciudad Autónoma de Ceuta en Inteligencia Artificial y Tecnologías Emergentes
+          para el Bienestar (Cátedra CEUTA-IATEB) es una iniciativa conjunta entre la Universidad de Granada y la Ciudad
+          Autónoma de Ceuta. Su objetivo es convertirse en un núcleo relevante para la investigación, la formación y la
+          transferencia de conocimiento en el ámbito de la Inteligencia Artificial y las Tecnologías Emergentes aplicadas a la
           Educación, la Salud, los Servicios Sociales y la Economía.</p>
       </div>
       <div class="partners">
@@ -195,6 +195,11 @@
 
       <form class="buzon-form" method="post" action="{{ route('sugerencias.store') }}" novalidate>
         @csrf
+        <div style="position:absolute; left:-9999px;" aria-hidden="true">
+            <label for="website">No rellenes este campo</label>
+            <input type="text" name="website" id="website" tabindex="-1" autocomplete="off">
+        </div>
+        <input type="hidden" name="_t" value="{{ encrypt(now()->timestamp) }}">
         <div class="form-grid">
           <div class="field">
             <label for="categoria_id">Categoría principal <span class="req">*</span></label>

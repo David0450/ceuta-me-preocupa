@@ -6,6 +6,7 @@ use App\Models\Sugerencia;
 use App\Models\Categoria;
 use App\Http\Requests\GuardarSugerenciaRequest;
 use Illuminate\Http\Request;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Facades\DB;
 
 class SugerenciaController extends Controller
@@ -23,6 +24,11 @@ class SugerenciaController extends Controller
      */
     public function store(GuardarSugerenciaRequest $request)
     {
+        if ($this->pareceSpam($request)) {
+            // Respuesta falsa de éxito: el bot no sabe que ha sido descartado
+            return redirect()->back()->with('success', '¡Gracias! Hemos recibido tu sugerencia.');
+        }
+
         $datos = $request->validated();
 
         DB::transaction(function () use ($datos) {
@@ -99,5 +105,21 @@ class SugerenciaController extends Controller
         ]);
 
         return view('index', compact('categorias', 'subcategoriasPorCategoria'));
+    }
+
+    private function pareceSpam($request): bool
+    {
+        if (filled($request->input('website'))) {
+            return true;
+        }
+
+        try {
+            $inicio = (int) decrypt($request->input('_t'));
+        } catch (DecryptException $e) {
+            return true;
+        }
+
+        // Menos de 3 s rellenando el formulario = casi seguro un bot
+        return (now()->timestamp - $inicio) < 3;
     }
 }

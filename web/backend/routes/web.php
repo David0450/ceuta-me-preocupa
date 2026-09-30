@@ -7,7 +7,9 @@ use App\Http\Controllers\SugerenciaController;
 use App\Http\Controllers\Admin\SugerenciaAdminController;
 
 Route::get('/', [SugerenciaController::class, 'create'])->name('sugerencias.create');
-Route::post('/sugerencias', [SugerenciaController::class, 'store'])->name('sugerencias.store');
+Route::post('/sugerencias', [SugerenciaController::class, 'store'])
+    ->middleware('throttle:buzon')
+    ->name('sugerencias.store');
 
 
 Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
