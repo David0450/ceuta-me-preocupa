@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+
+# Credenciales reales de la BD - usar db_config.example.py como plantilla
+db_config.py
+
+# Datos de ciudadanos (nivel A/B) - no deben subirse a un repositorio
+ficheros_a_analizar/
+ficheros_analizados/
+salida_buzon/
