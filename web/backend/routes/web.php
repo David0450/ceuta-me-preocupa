@@ -16,6 +16,8 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/sugerencias/{sugerencia}', [SugerenciaAdminController::class, 'show'])->name('sugerencias.show');
 });
 
+Route::view('/privacidad', 'privacidad')->name('privacidad');
+
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
