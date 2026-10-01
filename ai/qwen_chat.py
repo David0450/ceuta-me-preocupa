@@ -42,8 +42,8 @@ GROUP_CONCAT(DISTINCT SU.nombre ORDER BY SU.nombre SEPARATOR '; ') AS subcategor
 FROM datos_originales AS D 
 INNER JOIN sugerencias AS S ON D.sugerencia_id=S.id 
 INNER JOIN categorias AS C ON S.categoria_id=C.id 
-LEFT JOIN sugerencia_subcategoria AS SB ON S.id=SB.sugerencia_id 
-LEFT JOIN subcategorias AS SU ON SB.subcategoria_id=SU.id
+INNER JOIN sugerencia_subcategoria AS SB ON S.id=SB.sugerencia_id 
+INNER JOIN subcategorias AS SU ON SB.subcategoria_id=SU.id
 WHERE D.procesado=0
 GROUP BY D.id,D.sugerencia_id,D.texto_original,D.resultado_esperado_original,D.procesado,C.nombre;
 """
@@ -75,10 +75,30 @@ TAXONOMIA = [
     ("Movilidad", "Accesibilidad"),
     ("Movilidad", "Carga y descarga"),
     ("Sanidad", "Salud pública"),
-    ("Seguridad", ""),
-    ("Servicios Sociales", ""),
-    ("Universidad", ""),
-    ("Urbanismo", ""),
+    ("Sanidad", "Atención sanitaria"),
+    ("Sanidad", "Accesibilidad sanitaria"),
+    ("Sanidad", "Prevención"),
+    ("Seguridad", "Seguridad ciudadana"),
+    ("Seguridad", "Seguridad de instalaciones"),
+    ("Seguridad", "Policía local"),
+    ("Seguridad", "Prevención"),
+    ("Servicios Sociales", "Atención social"),
+    ("Servicios Sociales", "Dependencia"),
+    ("Servicios Sociales", "Inclusión"),
+    ("Servicios Sociales", "Vulnerabilidad"),
+    ("Servicios Sociales", "Igualdad"),
+    ("Servicios Sociales", "Apoyo comunitario"),
+    ("Universidad", "Docencia"),
+    ("Universidad", "Investigación"),
+    ("Universidad", "Becas"),
+    ("Universidad", "Instalaciones"),
+    ("Universidad", "Vida universitaria"),
+    ("Urbanismo", "Planeamiento"),
+    ("Urbanismo", "Licencias"),
+    ("Urbanismo", "Vivienda"),
+    ("Urbanismo", "Obras"),
+    ("Urbanismo", "Accesibilidad urbana"),
+    ("Urbanismo", "Patrimonio"),
 ]
 VALID_CATEGORIES = {category for category, _ in TAXONOMIA}
 
@@ -150,15 +170,13 @@ def is_emergency(text: str) -> bool:
 def build_classification_prompt(
     text: str, user_category: str = "", user_subcategories: str = ""
 ) -> str:
-    categorias = "\n".join(
-        f"- {cat} -> {subcat or '(sin subcategoria)'}" for cat, subcat in TAXONOMIA
-    )
+    categorias = "\n".join(f"- {cat} -> {subcat}" for cat, subcat in TAXONOMIA)
     return (
         "Eres el clasificador del buzon virtual ciudadano de Ceuta. Sigue el protocolo:\n"
         "1. Elimina cualquier dato personal restante (nombres, direcciones exactas, telefonos, "
         "correos, DNI/NIE),incluyendo menciones a su vida privada(relaciones familiares, problemas de salud, etc.), y sustituyelo por \"[dato personal eliminado]\".\n"
         "2. Elige exactamente una categoria_principal y hasta 2 subcategorias de la lista; "
-        "si figura '(sin subcategoria)', devuelve subcategoria vacia. No pongas el texto '(sin subcategoria)' en categoria ni subcategoria\n"
+        "no inventes categorias ni subcategorias fuera de la lista.\n"
         "3. Compara la clasificacion del usuario con la tuya usando el texto y elige la mas adecuada; "
         "devuelve decision_comparacion como 'usuario' o 'llm' y justifica brevemente la decision.\n"
         "4. Propon un organismo_propuesto (no es resolucion firme, solo propuesta).\n"
