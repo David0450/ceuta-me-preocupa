@@ -22,6 +22,12 @@ class DatabaseSeeder extends Seeder
             'email' => 'test@example.com',
         ]);*/
 
+        /*User::factory()->create([
+            'name'      => 'UsuarioPrueba',
+            'email'     => 'prueba@mail.com',
+            'password'  => 'prueba123'
+        ]);*/
+
         $this->call([
             CategoriaSeeder::class,
         ]);
