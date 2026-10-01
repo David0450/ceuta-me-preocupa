@@ -32,12 +32,13 @@ COLUMNA_ID = "id"
 COLUMNA_TEXTO = "texto_original"
 COLUMNA_ESTADO = "procesado"
 
-# Edita esta consulta con el JOIN que necesites entre tus tablas.
-# Debe devolver, como minimo, una columna con el texto (ver COLUMNA_TEXTO) y,
-# si quieres marcar los registros como procesados, una columna "id".
 SQL_QUERY = f"""
-SELECT *
-FROM datos_originales
+SELECT D.id,D.sugerencia_id,D.texto_original,D.resultado_esperado_original,
+D.procesado,S.id,C.nombre,SU.nombre FROM datos_originales AS D 
+INNER JOIN sugerencias AS S ON D.sugerencia_id=S.id 
+INNER JOIN categorias AS C ON S.categoria_id=C.id 
+INNER JOIN sugerencia_subcategoria AS SB ON S.id=SB.sugerencia_id 
+INNER JOIN subcategorias AS SU ON SB.subcategoria_id=SU.id WHERE D.procesado=0;
 """
 
 # Taxonomia reconstruida a partir de la seccion 2 del protocolo (matriz de derivacion).
@@ -135,7 +136,7 @@ def build_classification_prompt(text: str) -> str:
     return (
         "Eres el clasificador del buzon virtual ciudadano de Ceuta. Sigue el protocolo:\n"
         "1. Elimina cualquier dato personal restante (nombres, direcciones exactas, telefonos, "
-        "correos, DNI/NIE) y sustituyelo por \"[dato personal eliminado]\".\n"
+        "correos, DNI/NIE),incluyendo menciones a su vida privada, y sustituyelo por \"[dato personal eliminado]\".\n"
         "2. Elige una categoria_principal de la lista y, si aplica, hasta dos subcategorias.\n"
         "3. Propon un organismo_propuesto (no es resolucion firme, solo propuesta).\n"
         "4. Si la informacion es insuficiente o afecta a varios organismos, usa "
@@ -203,7 +204,7 @@ def fetch_records(query: str) -> pd.DataFrame:
 
 def mark_as_processed(ids: list) -> None:
     """Marca los registros ya tratados con procesado = 1 para no releerlos."""
-    if not ids:
+    """if not ids:
         return
     connection = pymysql.connect(**DB_CONFIG)
     try:
@@ -216,7 +217,7 @@ def mark_as_processed(ids: list) -> None:
             cursor.execute(query, ids)
         connection.commit()
     finally:
-        connection.close()
+        connection.close()"""
 
 
 def process_records(df: pd.DataFrame, text_column: str) -> dict:

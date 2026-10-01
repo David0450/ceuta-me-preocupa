@@ -9,3 +9,5 @@ db_config.py
 ficheros_a_analizar/
 ficheros_analizados/
 salida_buzon/
+
+protocolo.txt
