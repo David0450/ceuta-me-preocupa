@@ -38,7 +38,7 @@
       <div class="hero-inner">
         <span class="eyebrow">Buzón ciudadano · Cátedra Ceuta-IATEB</span>
         <h1>Ceuta me preocupa</h1>
-        <p class="lead">En el contexto de emergencia que atraviesa la ciudad, la Cátedra Ceuta-IATEB abre este canal para que cuentes, con tus propias palabras, qué preocupaciones, incidencias no urgentes o propuestas de mejora tienes sobre la gestión pública de Ceuta. Tu respuesta se suma a las demás para construir un retrato agregado y verificable de lo que preocupa a la ciudad.</p>
+        <p class="lead">En el contexto de emergencia que atraviesa la ciudad, la <a href="https://catedras.ugr.es/iateb/" target="_blank">Cátedra Ceuta-IATEB</a> abre este canal para que cuentes, con tus propias palabras, qué preocupaciones, incidencias no urgentes o propuestas de mejora tienes sobre la gestión pública de Ceuta. Tu respuesta se suma a las demás para construir un retrato agregado y verificable de lo que preocupa a la ciudad.</p>
         <div class="hero-actions">
           <a class="btn btn-accent" href="#formulario">Contar mi preocupación →</a>
           <span class="hero-note">
@@ -74,7 +74,7 @@
           <h2>Un canal de escucha, no un registro de quejas</h2>
         </div>
         <div>
-          <p class="lede">«Ceuta Me Preocupa» es un buzón impulsado por la Cátedra Ceuta-IATEB para recoger, con tus propias palabras, preocupaciones, incidencias no urgentes y propuestas de mejora relacionadas con la gestión pública de Ceuta.</p>
+          <p class="lede">«Ceuta Me Preocupa» es un buzón impulsado por la <a href="https://catedras.ugr.es/iateb/" target="_blank">Cátedra Ceuta-IATEB</a> para recoger, con tus propias palabras, preocupaciones, incidencias no urgentes y propuestas de mejora relacionadas con la gestión pública de Ceuta.</p>
           <p class="lede">No es un registro de quejas formales, ni un canal de emergencias, ni una vía de denuncia, ni un procedimiento para solicitar prestaciones individualizadas. Su objetivo es identificar patrones, proponer a qué organismo corresponde previsiblemente cada asunto, y devolver a la ciudadanía una respuesta agregada y verificable.</p>
         </div>
       </div>
@@ -106,7 +106,7 @@
     <div class="wrap">
       <div class="section-head">
         <span class="kicker">Cómo funciona</span>
-        <h2>Tres pasos, sin dato de más</h2>
+        <h2>Tres pasos, sin datos de más</h2>
       </div>
       <ol class="steps">
         <li class="step">
@@ -164,9 +164,9 @@
     <div class="wrap">
       <div class="section-head">
         <span class="kicker">Quién impulsa esto</span>
-        <h2>La Cátedra Ceuta-IATEB</h2>
+        <h2><a href="https://catedras.ugr.es/iateb/" target="_blank">Cátedra Ceuta-IATEB</a></h2>
         <p class="lede">La Cátedra UGR - Ciudad Autónoma de Ceuta en Inteligencia Artificial y Tecnologías Emergentes
-          para el Bienestar (Cátedra CEUTA-IATEB) es una iniciativa conjunta entre la Universidad de Granada y la Ciudad
+          para el Bienestar (<a href="https://catedras.ugr.es/iateb/" target="_blank">Cátedra Ceuta-IATEB</a>) es una iniciativa conjunta entre la Universidad de Granada y la Ciudad
           Autónoma de Ceuta. Su objetivo es convertirse en un núcleo relevante para la investigación, la formación y la
           transferencia de conocimiento en el ámbito de la Inteligencia Artificial y las Tecnologías Emergentes aplicadas a la
           Educación, la Salud, los Servicios Sociales y la Economía.</p>
@@ -193,8 +193,14 @@
       </div>
       @endif
 
-      <form class="buzon-form" method="post" action="{{ route('sugerencias.store') }}" novalidate>
+        <form class="buzon-form" method="post" action="{{ route('sugerencias.store') }}" novalidate>
         @csrf
+        @if ($errors->any())
+          <div role="alert" style="margin-bottom:24px; padding:16px 20px; border:2px solid #dc2626; border-radius:12px; background:#fef2f2; color:#991b1b; box-shadow:0 4px 12px rgba(220,38,38,.14);">
+            <strong style="display:block; margin-bottom:6px; font-size:1.05rem;">Revisa el formulario</strong>
+            <span>Hay campos que necesitan tu atención antes de poder enviar el mensaje.</span>
+          </div>
+        @endif
         <div style="position:absolute; left:-9999px;" aria-hidden="true">
             <label for="website">No rellenes este campo</label>
             <input type="text" name="website" id="website" tabindex="-1" autocomplete="off">
@@ -209,52 +215,51 @@
                 <option value="{{ $categoria->id }}" @selected(old('categoria_id') == $categoria->id)>{{ $categoria->nombre }}</option>
               @endforeach
             </select>
-            @error('categoria_id') <span class="form-error">{{ $message }}</span> @enderror
+            @error('categoria_id') <span class="form-error" role="alert" style="display:block; margin-top:8px; padding:8px 10px; border-left:4px solid #dc2626; border-radius:4px; background:#fef2f2; color:#b91c1c; font-weight:600;">{{ $message }}</span> @enderror
           </div>
           <div class="field">
             <label>Subcategoría <span class="req">*</span> <span class="form-note">(elige 1 o 2)</span></label>
             <div id="subcategorias-cont" class="subcat-group">
               <p class="form-note" style="margin:0;">Elige primero una categoría.</p>
             </div>
-            @error('subcategorias') <span class="form-error">{{ $message }}</span> @enderror
-            @error('subcategorias.0') <span class="form-error">{{ $message }}</span> @enderror
+            @error('subcategorias') <span class="form-error" role="alert" style="display:block; margin-top:8px; padding:8px 10px; border-left:4px solid #dc2626; border-radius:4px; background:#fef2f2; color:#b91c1c; font-weight:600;">{{ $message }}</span> @enderror
+            @error('subcategorias.0') <span class="form-error" role="alert" style="display:block; margin-top:8px; padding:8px 10px; border-left:4px solid #dc2626; border-radius:4px; background:#fef2f2; color:#b91c1c; font-weight:600;">{{ $message }}</span> @enderror
           </div>
         </div>
 
         <div class="field">
-          <label for="zona">Zona aproximada o barrio</label>
-          <input type="text" id="zona" name="zona" placeholder="Ej.: Príncipe Alfonso, centro…" value="{{ old('zona') }}" @disabled(!old('zona'))>
-          <label class="checkbox-line">
-            <input type="checkbox" id="zona-omitir" @checked(!old('zona'))>
-            No deseo indicarlo
-          </label>
-          @error('zona') <span class="form-error">{{ $message }}</span> @enderror
+          <label for="zona">Zona aproximada o barrio (opcional)</label>
+          <input type="text" id="zona" name="zona" placeholder="Ej.: Príncipe Alfonso, centro…" value="{{ old('zona') }}">
+          @error('zona') <span class="form-error" role="alert" style="display:block; margin-top:8px; padding:8px 10px; border-left:4px solid #dc2626; border-radius:4px; background:#fef2f2; color:#b91c1c; font-weight:600;">{{ $message }}</span> @enderror
         </div>
 
         <div class="field">
           <label for="descripcion">¿Qué problema observa o qué propuesta plantea? <span class="req">*</span></label>
-          <textarea id="descripcion" name="descripcion" rows="5" maxlength="1000" required placeholder="Describe brevemente tu preocupación o propuesta (máximo 1.000 caracteres)">{{ old('descripcion') }}</textarea>
-          @error('descripcion') <span class="form-error">{{ $message }}</span> @enderror
+          <div style="position: relative;">
+            <textarea id="descripcion" name="descripcion" rows="5" maxlength="1000" required placeholder="Describe brevemente tu preocupación o propuesta (máximo 1.000 caracteres)" style="padding-bottom: 2rem;">{{ old('descripcion') }}</textarea>
+            <span id="descripcion-car" style="position: absolute; right: 0.75rem; bottom: 0.65rem; font-size: 0.8rem; color: #6b7280; pointer-events: none;">1000</span>
+          </div>
+          @error('descripcion') <span class="form-error" role="alert" style="display:block; margin-top:8px; padding:8px 10px; border-left:4px solid #dc2626; border-radius:4px; background:#fef2f2; color:#b91c1c; font-weight:600;">{{ $message }}</span> @enderror
         </div>
 
         <div class="field">
           <label for="resultado_esperado">Resultado esperado o propuesta de mejora (opcional)</label>
           <textarea id="resultado_esperado" name="resultado_esperado" rows="3" maxlength="1000" placeholder="¿Qué te gustaría que ocurriera?">{{ old('resultado_esperado') }}</textarea>
-          @error('resultado_esperado') <span class="form-error">{{ $message }}</span> @enderror
+          @error('resultado_esperado') <span class="form-error" role="alert" style="display:block; margin-top:8px; padding:8px 10px; border-left:4px solid #dc2626; border-radius:4px; background:#fef2f2; color:#b91c1c; font-weight:600;">{{ $message }}</span> @enderror
         </div>
 
         <div class="field field-contact">
           <label for="contacto">Contacto opcional (solo si quieres respuesta individual)</label>
           <input type="text" id="contacto" name="contacto" placeholder="Correo o teléfono (opcional)" value="{{ old('contacto') }}">
-          @error('contacto') <span class="form-error">{{ $message }}</span> @enderror
+          @error('contacto') <span class="form-error" role="alert" style="display:block; margin-top:8px; padding:8px 10px; border-left:4px solid #dc2626; border-radius:4px; background:#fef2f2; color:#b91c1c; font-weight:600;">{{ $message }}</span> @enderror
         </div>
 
         <div class="field">
           <label class="checkbox-line">
             <input type="checkbox" name="acepta_privacidad" value="1" @checked(old('acepta_privacidad'))>
-            <p style="margin: 0">He leído y acepto la <a href="{{ route('privacidad') }}" target="_self">información de privacidad</a> y los límites del buzón. <span class="req">*</span></p>
+            <p style="margin: 0">He leído y acepto la <a href="{{ route('privacidad') }}" target="_blank">información de privacidad</a> y los límites del buzón. <span class="req">*</span></p>
           </label>
-          @error('acepta_privacidad') <span class="form-error">{{ $message }}</span> @enderror
+          @error('acepta_privacidad') <span class="form-error" role="alert" style="display:block; margin-top:8px; padding:8px 10px; border-left:4px solid #dc2626; border-radius:4px; background:#fef2f2; color:#b91c1c; font-weight:600;">{{ $message }}</span> @enderror
         </div>
 
         <div class="form-actions">
@@ -338,6 +343,7 @@
     })();
 
     // Zona: activar/desactivar con "No deseo indicarlo"
+    /*
     (function () {
       const zona = document.getElementById('zona');
       const omitir = document.getElementById('zona-omitir');
@@ -346,6 +352,17 @@
         if (omitir.checked) zona.value = '';
       });
     })();
+    */
+
+
+   (function () {
+       const descripcion = document.getElementById('descripcion');
+       const caracteresDescripcion = document.getElementById('descripcion-car');
+
+       descripcion.addEventListener('input', function() {
+        caracteresDescripcion.textContent = 1000 - descripcion.value.length;
+      });
+      })();
   </script>
 </body>
 </html>

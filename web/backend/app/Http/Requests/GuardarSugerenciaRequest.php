@@ -7,6 +7,8 @@ use Illuminate\Validation\Rule;
 
 class GuardarSugerenciaRequest extends FormRequest
 {
+    protected $redirect = '/#formulario';
+
     public function authorize(): bool
     {
         // Formulario público: cualquiera puede enviar.
@@ -62,6 +64,7 @@ class GuardarSugerenciaRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'categoria_id.required'      => 'Debes seleccionar una categoría.',
             'subcategorias.required'     => 'Selecciona al menos una subcategoría.',
             'subcategorias.min'          => 'Selecciona al menos una subcategoría.',
             'subcategorias.max'          => 'Puedes elegir como máximo dos subcategorías.',
