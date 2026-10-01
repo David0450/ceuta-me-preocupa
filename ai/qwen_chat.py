@@ -30,41 +30,57 @@ OUTPUT_DIR = BASE_DIR / "salida_buzon"
 # Ajustar al esquema real de phpMyAdmin.
 COLUMNA_ID = "id"
 COLUMNA_TEXTO = "texto_original"
+COLUMNA_RESULTADO_ESPERADO = "resultado_esperado_original"
+COLUMNA_CATEGORIA_USUARIO = "categoria_usuario"
+COLUMNA_SUBCATEGORIAS_USUARIO = "subcategorias_usuario"
 COLUMNA_ESTADO = "procesado"
 
 SQL_QUERY = f"""
 SELECT D.id,D.sugerencia_id,D.texto_original,D.resultado_esperado_original,
-D.procesado,S.id,C.nombre,SU.nombre FROM datos_originales AS D 
+D.procesado,C.nombre AS categoria_usuario,
+GROUP_CONCAT(DISTINCT SU.nombre ORDER BY SU.nombre SEPARATOR '; ') AS subcategorias_usuario
+FROM datos_originales AS D 
 INNER JOIN sugerencias AS S ON D.sugerencia_id=S.id 
 INNER JOIN categorias AS C ON S.categoria_id=C.id 
-INNER JOIN sugerencia_subcategoria AS SB ON S.id=SB.sugerencia_id 
-INNER JOIN subcategorias AS SU ON SB.subcategoria_id=SU.id WHERE D.procesado=0;
+LEFT JOIN sugerencia_subcategoria AS SB ON S.id=SB.sugerencia_id 
+LEFT JOIN subcategorias AS SU ON SB.subcategoria_id=SU.id
+WHERE D.procesado=0
+GROUP BY D.id,D.sugerencia_id,D.texto_original,D.resultado_esperado_original,D.procesado,C.nombre;
 """
 
-# Taxonomia reconstruida a partir de la seccion 2 del protocolo (matriz de derivacion).
-# organismo_propuesto es SOLO una propuesta: la unidad gestora debe confirmarla (seccion 2).
+# Categorias y subcategorias disponibles en las tablas de la base de datos.
 TAXONOMIA = [
-    ("Medio Ambiente, Servicios Urbanos y Vivienda",
-     "Ciudad Autonoma de Ceuta: Consejeria de Medio Ambiente, Servicios Urbanos y Vivienda"),
-    ("Transporte, trafico y accesibilidad",
-     "Ciudad Autonoma de Ceuta / Policia Local o Delegacion del Gobierno cuando afecte a seguridad"),
-    ("Educacion no universitaria",
-     "Direccion Provincial de Educacion (Ministerio) / Ciudad Autonoma: Direccion General de Educacion"),
-    ("Educacion universitaria",
-     "Ministerio competente en universidades o Ciudad Autonoma segun el caso"),
-    ("Comercio, turismo y empleo",
-     "Ciudad Autonoma de Ceuta: Consejeria/Direccion General de Comercio, Turismo y Empleo"),
-    ("Sanidad",
-     "Ciudad Autonoma: Direccion General de Sanidad / INGESA para emergencias sanitarias"),
-    ("Seguridad ciudadana",
-     "Delegacion del Gobierno y Fuerzas y Cuerpos de Seguridad del Estado / Policia Local"),
-    ("Asistencia social e igualdad",
-     "Direccion General de Igualdad y Lucha contra la Violencia de Genero / Servicios Sociales"),
-    ("Infraestructuras portuarias y estatales",
-     "Servicios Urbanos, autoridad portuaria u organismo estatal competente"),
-    ("Competencia por confirmar",
-     "Unidad gestora del buzon (pendiente de asignacion)"),
+    ("Economía", "Empleo"),
+    ("Economía", "Comercio"),
+    ("Economía", "Emprendimiento"),
+    ("Economía", "Turismo"),
+    ("Economía", "Ayudas"),
+    ("Economía", "Transformación económica"),
+    ("Educación no universitaria", "Centros"),
+    ("Educación no universitaria", "Escolarización"),
+    ("Educación no universitaria", "Profesorado"),
+    ("Educación no universitaria", "Currículo"),
+    ("Educación no universitaria", "Formación profesional"),
+    ("Educación no universitaria", "Convivencia escolar"),
+    ("Medioambiente", "Residuos"),
+    ("Medioambiente", "Limpieza"),
+    ("Medioambiente", "Ruido"),
+    ("Medioambiente", "Zonas verdes"),
+    ("Medioambiente", "Contaminación"),
+    ("Medioambiente", "Sostenibilidad"),
+    ("Movilidad", "Transporte público"),
+    ("Movilidad", "Tráfico"),
+    ("Movilidad", "Aparcamiento"),
+    ("Movilidad", "Itinerarios peatonales"),
+    ("Movilidad", "Accesibilidad"),
+    ("Movilidad", "Carga y descarga"),
+    ("Sanidad", "Salud pública"),
+    ("Seguridad", ""),
+    ("Servicios Sociales", ""),
+    ("Universidad", ""),
+    ("Urbanismo", ""),
 ]
+VALID_CATEGORIES = {category for category, _ in TAXONOMIA}
 
 EMERGENCY_KEYWORDS = [
     "emergencia", "riesgo vital", "peligro de muerte", "violencia", "agresion",
@@ -131,22 +147,36 @@ def is_emergency(text: str) -> bool:
     return any(keyword in lowered for keyword in EMERGENCY_KEYWORDS)
 
 
-def build_classification_prompt(text: str) -> str:
-    categorias = "\n".join(f"- {cat} -> {org}" for cat, org in TAXONOMIA)
+def build_classification_prompt(
+    text: str, user_category: str = "", user_subcategories: str = ""
+) -> str:
+    categorias = "\n".join(
+        f"- {cat} -> {subcat or '(sin subcategoria)'}" for cat, subcat in TAXONOMIA
+    )
     return (
         "Eres el clasificador del buzon virtual ciudadano de Ceuta. Sigue el protocolo:\n"
         "1. Elimina cualquier dato personal restante (nombres, direcciones exactas, telefonos, "
-        "correos, DNI/NIE),incluyendo menciones a su vida privada, y sustituyelo por \"[dato personal eliminado]\".\n"
-        "2. Elige una categoria_principal de la lista y, si aplica, hasta dos subcategorias.\n"
-        "3. Propon un organismo_propuesto (no es resolucion firme, solo propuesta).\n"
-        "4. Si la informacion es insuficiente o afecta a varios organismos, usa "
+        "correos, DNI/NIE),incluyendo menciones a su vida privada(relaciones familiares, problemas de salud, etc.), y sustituyelo por \"[dato personal eliminado]\".\n"
+        "2. Elige exactamente una categoria_principal y hasta 2 subcategorias de la lista; "
+        "si figura '(sin subcategoria)', devuelve subcategoria vacia. No pongas el texto '(sin subcategoria)' en categoria ni subcategoria\n"
+        "3. Compara la clasificacion del usuario con la tuya usando el texto y elige la mas adecuada; "
+        "devuelve decision_comparacion como 'usuario' o 'llm' y justifica brevemente la decision.\n"
+        "4. Propon un organismo_propuesto (no es resolucion firme, solo propuesta).\n"
+        "5. Si la informacion es insuficiente o afecta a varios organismos, usa "
         "\"Competencia por confirmar\".\n"
-        "5. Evalua nivel_urgencia como \"baja\", \"media\" o \"alta\" segun riesgo y reversibilidad.\n"
+        "6. Evalua nivel_urgencia como \"baja\", \"media\" o \"alta\" segun riesgo y reversibilidad.\n"
+        "7. Si el texto contiene informacion personal o sensible, marca \"requiere_revision_privacidad\": true.\n" \
+        "8. Si el texto contiene palabrotas, insultos o lenguaje ofensivo, sustituyelos por \"[lenguaje ofensivo eliminado]\".\n"
         "No clasifiques por nacionalidad, origen, ideologia o religion.\n\n"
         f"Categorias disponibles:\n{categorias}\n\n"
+        f"Clasificacion introducida por el usuario:\n"
+        f"- categoria: {user_category or '(no disponible)'}\n"
+        f"- subcategorias: {user_subcategories or '(sin subcategoria)'}\n\n"
         f"Texto de la comunicacion:\n\"\"\"{text}\"\"\"\n\n"
         "Responde SOLO con un JSON valido, sin explicaciones, con estas claves exactas:\n"
-        "{\"categoria_principal\": \"...\", \"subcategoria\": \"...\", "
+        "{\"categoria_principal\": \"...\", \"subcategorias\": [\"...\"], "
+        "\"decision_comparacion\": \"usuario|llm\", "
+        "\"justificacion_comparacion\": \"...\", "
         "\"organismo_propuesto\": \"...\", \"nivel_urgencia\": \"baja|media|alta\", "
         "\"texto_desidentificado\": \"...\", \"requiere_revision_privacidad\": true|false}"
     )
@@ -159,15 +189,58 @@ def parse_model_json(raw_response: str) -> dict:
     return json.loads(match.group(0))
 
 
-def classify_text(text: str) -> dict:
+def normalize_subcategories(value: object, category: str) -> str:
+    if isinstance(value, str):
+        candidates = value.split(";")
+    elif isinstance(value, list):
+        candidates = value
+    else:
+        candidates = []
+
+    valid_subcategories = {
+        subcategory
+        for tax_category, subcategory in TAXONOMIA
+        if tax_category == category and subcategory
+    }
+    selected = []
+    for candidate in candidates:
+        subcategory = str(candidate).strip()
+        if subcategory in valid_subcategories and subcategory not in selected:
+            selected.append(subcategory)
+        if len(selected) == 2:
+            break
+    return "; ".join(selected)
+
+
+def classify_text(
+    text: str, user_category: str = "", user_subcategories: str = ""
+) -> dict:
     """Aplica el paso de clasificacion doble (seccion 4.2.4) con fallback seguro."""
-    prompt = build_classification_prompt(text)
+    prompt = build_classification_prompt(text, user_category, user_subcategories)
     try:
         raw = generate_response(prompt, max_new_tokens=400)
         data = parse_model_json(raw)
+        llm_category = data.get("categoria_principal", "Competencia por confirmar")
+        if llm_category not in VALID_CATEGORIES:
+            llm_category = "Competencia por confirmar"
+        llm_subcategories = normalize_subcategories(
+            data.get("subcategorias", data.get("subcategoria", "")), llm_category
+        )
+        user_subcategories = normalize_subcategories(user_subcategories, user_category)
+        decision = data.get("decision_comparacion", "llm")
+        selected_category = user_category if decision == "usuario" and user_category else llm_category
+        selected_subcategories = (
+            user_subcategories if decision == "usuario" and user_category else llm_subcategories
+        )
         return {
-            "categoria_principal": data.get("categoria_principal", "Competencia por confirmar"),
-            "subcategoria": data.get("subcategoria", ""),
+            "categoria_principal": selected_category,
+            "subcategoria": selected_subcategories,
+            "categoria_llm": llm_category,
+            "subcategoria_llm": llm_subcategories,
+            "categoria_usuario": user_category,
+            "subcategoria_usuario": user_subcategories,
+            "decision_comparacion": decision if decision in {"usuario", "llm"} else "llm",
+            "justificacion_comparacion": data.get("justificacion_comparacion", ""),
             "organismo_propuesto": data.get("organismo_propuesto", "Unidad gestora del buzon (pendiente de asignacion)"),
             "nivel_urgencia": data.get("nivel_urgencia", "media"),
             "texto_desidentificado": data.get("texto_desidentificado", text),
@@ -178,6 +251,12 @@ def classify_text(text: str) -> dict:
         return {
             "categoria_principal": "Competencia por confirmar",
             "subcategoria": "",
+            "categoria_llm": "Competencia por confirmar",
+            "subcategoria_llm": "",
+            "categoria_usuario": user_category,
+            "subcategoria_usuario": user_subcategories,
+            "decision_comparacion": "llm",
+            "justificacion_comparacion": "No se pudo comparar la clasificacion del usuario con la del modelo.",
             "organismo_propuesto": "Unidad gestora del buzon (pendiente de asignacion)",
             "nivel_urgencia": "media",
             "texto_desidentificado": text,
@@ -231,6 +310,12 @@ def process_records(df: pd.DataFrame, text_column: str) -> dict:
     for _, row in df.iterrows():
         original_text = str(row[text_column])
         pre_redacted, pii_found = redact_pii(original_text)
+        expected_result = str(row.get(COLUMNA_RESULTADO_ESPERADO, ""))
+        redacted_expected_result, expected_pii_found = redact_pii(expected_result)
+        user_category = row.get(COLUMNA_CATEGORIA_USUARIO, "")
+        user_subcategories = row.get(COLUMNA_SUBCATEGORIAS_USUARIO, "")
+        user_category = "" if pd.isna(user_category) else str(user_category).strip()
+        user_subcategories = "" if pd.isna(user_subcategories) else str(user_subcategories).strip()
         emergency = is_emergency(pre_redacted)
 
         if emergency:
@@ -241,12 +326,20 @@ def process_records(df: pd.DataFrame, text_column: str) -> dict:
                 "nivel_urgencia": "alta",
                 "texto_desidentificado": pre_redacted,
                 "requiere_revision_privacidad": True,
+                "categoria_llm": "Seguridad",
+                "subcategoria_llm": "",
+                "categoria_usuario": user_category,
+                "subcategoria_usuario": normalize_subcategories(user_subcategories, user_category),
+                "decision_comparacion": "llm",
+                "justificacion_comparacion": "La comunicación se ha escalado por emergencia.",
             }
             estado = "escalado_emergencia"
             accion = "Mostrado canal de emergencia al ciudadano; alerta priorizada para revision humana"
         else:
-            record = classify_text(pre_redacted)
-            record["requiere_revision_privacidad"] = record["requiere_revision_privacidad"] or pii_found
+            record = classify_text(pre_redacted, user_category, user_subcategories)
+            record["requiere_revision_privacidad"] = (
+                record["requiere_revision_privacidad"] or pii_found or expected_pii_found
+            )
             estado = "pendiente_revision"
             accion = ""
 
@@ -255,19 +348,19 @@ def process_records(df: pd.DataFrame, text_column: str) -> dict:
         seen_hashes[text_hash] = seen_hashes.get(text_hash, 0) + 1
 
         records.append({
-            "id_aleatorio": str(uuid.uuid4()),
-            "fecha_recepcion": row.get("fecha_recepcion", now),
-            "categoria_principal": record["categoria_principal"],
-            "subcategoria": record["subcategoria"],
+            "categoria_llm": record["categoria_llm"],
+            "subcategoria_llm": record["subcategoria_llm"],
+            "categoria_usuario": record["categoria_usuario"],
+            "subcategoria_usuario": record["subcategoria_usuario"],
+            "decision_comparacion": record["decision_comparacion"],
+            "justificacion_comparacion": record["justificacion_comparacion"],
             "organismo_propuesto": record["organismo_propuesto"],
             "organismo_confirmado": "",
             "nivel_urgencia": record["nivel_urgencia"],
-            "estado": estado,
             "texto_desidentificado": record["texto_desidentificado"],
+            "resultado_esperado_desidentificado": redacted_expected_result,
             "posible_duplicado": posible_duplicado,
             "requiere_revision_privacidad": record["requiere_revision_privacidad"],
-            "accion_adoptada": accion,
-            "fecha_ultima_actualizacion": now,
         })
 
     nivel_b = pd.DataFrame(records)
