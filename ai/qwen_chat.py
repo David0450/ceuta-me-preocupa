@@ -173,7 +173,7 @@ def build_classification_prompt(
     categorias = "\n".join(f"- {cat} -> {subcat}" for cat, subcat in TAXONOMIA)
     return (
         "Eres el clasificador del buzon virtual ciudadano de Ceuta. Sigue el protocolo:\n"
-        "1. Elimina cualquier dato personal restante (nombres, direcciones exactas, telefonos, "
+        "1. Elimina cualquier dato personal restante (nombres,nombres de personas,nombres propios, direcciones exactas, telefonos, "
         "correos, DNI/NIE),incluyendo menciones a su vida privada(relaciones familiares, problemas de salud, etc.), y sustituyelo por \"[dato personal eliminado]\".\n"
         "2. Elige exactamente una categoria_principal y hasta 2 subcategorias de la lista; "
         "no inventes categorias ni subcategorias fuera de la lista.\n"
@@ -185,6 +185,8 @@ def build_classification_prompt(
         "6. Evalua nivel_urgencia como \"baja\", \"media\" o \"alta\" segun riesgo y reversibilidad.\n"
         "7. Si el texto contiene informacion personal o sensible, marca \"requiere_revision_privacidad\": true.\n" \
         "8. Si el texto contiene palabrotas, insultos o lenguaje ofensivo, sustituyelos por \"[lenguaje ofensivo eliminado]\".\n"
+        "9. Si el texto contiene lenguaje discriminatorio, sustituyelos por \"[lenguaje discriminatorio eliminado]\".\n"
+        "10. Si el texto contiene informacion que pueda ser considerada como noticia falsa,inverosimil(NO EXISTEN LOS HOMBRES LAGARTO) o fantasiosa pon requiere_revision_privacidad: true.\n"
         "No clasifiques por nacionalidad, origen, ideologia o religion.\n\n"
         f"Categorias disponibles:\n{categorias}\n\n"
         f"Clasificacion introducida por el usuario:\n"
@@ -387,17 +389,6 @@ def process_records(df: pd.DataFrame, text_column: str) -> dict:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     nivel_b.to_csv(output_dir / "nivel_b.csv", index=False, encoding="utf-8")
-
-    for categoria, group in nivel_b.groupby("categoria_principal"):
-        safe_name = re.sub(r"[^\w\-]+", "_", categoria.lower())
-        group.to_csv(output_dir / f"categoria_{safe_name}.csv", index=False, encoding="utf-8")
-
-    cuadro_maestro = (
-        nivel_b.groupby(["categoria_principal", "organismo_propuesto", "estado"])
-        .size()
-        .reset_index(name="total")
-    )
-    cuadro_maestro.to_csv(output_dir / "cuadro_maestro.csv", index=False, encoding="utf-8")
 
     ids = df[COLUMNA_ID].tolist() if COLUMNA_ID in df.columns else []
     return {"output_dir": str(output_dir), "total_registros": len(nivel_b), "ids": ids}
