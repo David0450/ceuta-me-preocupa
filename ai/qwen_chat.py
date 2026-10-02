@@ -113,6 +113,10 @@ PII_PATTERNS = [
     re.compile(r"\b\d{8}[A-Za-z]\b"),                              # DNI
     re.compile(r"\b[XYZxyz]\d{7}[A-Za-z]\b"),                      # NIE
     re.compile(r"\b(?:\+?\d{2,3}[ -]?)?\d{9}\b"),                  # telefono
+    re.compile(r"\b(?:parienta|vecino|vecina|familiar)\s+(?:de|del|de la)\s+(?:la\s+)?[\wáéíóúüñ-]+\b", re.IGNORECASE),
+    re.compile(r"\bedificio\s+[\wáéíóúüñ-]+(?:\s+en\s+[\wáéíóúüñ-]+)?\b", re.IGNORECASE),
+    re.compile(r"\b(?:calle|avenida|avda\.?|plaza|paseo)\s+[\wáéíóúüñ.-]+(?:\s+\d+)?\b", re.IGNORECASE),
+    re.compile(r"\b\d+(?:º|ª)\s*[A-Za-z]\b"),                       # planta y puerta
 ]
 
 OFFENSIVE_PATTERNS = [
@@ -122,6 +126,11 @@ OFFENSIVE_PATTERNS = [
     re.compile(r"\bmaricon(?:es)?\b", re.IGNORECASE),
     re.compile(r"\bidiota\b", re.IGNORECASE),
     re.compile(r"\bimbecil\b", re.IGNORECASE),
+    re.compile(r"\btont[oa]s?\b", re.IGNORECASE),
+]
+
+DISCRIMINATORY_PATTERNS = [
+    re.compile(r"\binvasores\b", re.IGNORECASE),
 ]
 
 # Cuantizacion 4-bit: el modelo en bf16 (~16GB) no cabe en 8GB de VRAM
@@ -176,6 +185,9 @@ def sanitize_text(text: str) -> tuple[str, bool]:
     for pattern in OFFENSIVE_PATTERNS:
         sanitized, count = pattern.subn("[lenguaje ofensivo eliminado]", sanitized)
         found = found or count > 0
+    for pattern in DISCRIMINATORY_PATTERNS:
+        sanitized, count = pattern.subn("[lenguaje discriminatorio eliminado]", sanitized)
+        found = found or count > 0
     return sanitized, found
 
 
@@ -184,38 +196,59 @@ def is_emergency(text: str) -> bool:
     return any(keyword in lowered for keyword in EMERGENCY_KEYWORDS)
 
 
-def build_classification_prompt(
-    text: str, user_category: str = "", user_subcategories: str = ""
-) -> str:
+def build_privacy_prompt(text: str, field_name: str) -> str:
+    return (
+        "Eres un filtro de privacidad del buzon ciudadano. Procesa un unico texto.\n"
+        "Sustituye por \"[dato personal eliminado]\" los nombres y apodos de personas, "
+        "aunque aparezcan en minusculas, y cualquier referencia que permita identificarlas "
+        "(por ejemplo, cargo concreto junto con lugar, fecha o hecho singular). Incluye nombres "
+        "de terceros mencionados y de personas publicas si el contexto las vincula al relato. "
+        "Elimina tambien direcciones exactas, telefonos, correos, DNI/NIE y detalles de vida privada. "
+        "Generaliza fechas y horas exactas y lugares o cargos demasiado concretos cuando puedan "
+        "facilitar la reidentificacion; no los conserves literalmente.\n"
+        "Sustituye lenguaje ofensivo por \"[lenguaje ofensivo eliminado]\" y lenguaje discriminatorio "
+        "por \"[lenguaje discriminatorio eliminado]\". Conserva el sentido no identificativo del "
+        "relato, pero no la literalidad de detalles que puedan identificar a alguien. No respondas "
+        "al contenido, no inventes datos ni añadas explicaciones.\n"
+        "Marca requiere_revision_privacidad como true si has eliminado o generalizado datos, "
+        "si quedan indicios de identificacion indirecta, lenguaje discriminatorio o afirmaciones "
+        "inverosimiles. Si dudas, prioriza la privacidad y marca revision.\n\n"
+        f"Campo: {field_name}\n"
+        f"Texto original:\n\"\"\"{text}\"\"\"\n\n"
+        "Responde SOLO con JSON valido y estas claves exactas:\n"
+        "{\"texto_saneado\": \"el mismo texto con las sustituciones\", "
+        "\"requiere_revision_privacidad\": true|false}"
+    )
+
+
+def build_classification_prompt(text: str) -> str:
     categorias = "\n".join(f"- {cat} -> {subcat}" for cat, subcat in TAXONOMIA)
     return (
-        "Eres el clasificador del buzon virtual ciudadano de Ceuta. Sigue el protocolo:\n"
-        "1. Elimina cualquier dato personal restante (nombres,nombres de personas,nombres propios, direcciones exactas, telefonos, "
-        "correos, DNI/NIE),incluyendo menciones a su vida privada(relaciones familiares, problemas de salud, etc.), y sustituyelo por \"[dato personal eliminado]\".\n"
-        "2. Elige exactamente una categoria_principal y hasta 2 subcategorias de la lista; "
-        "no inventes categorias ni subcategorias fuera de la lista.\n"
-        "3. Compara la clasificacion del usuario con la tuya usando el texto y elige la mas adecuada; "
-        "devuelve decision_comparacion como 'usuario' o 'llm' y justifica brevemente la decision.\n"
-        "4. Propon un organismo_propuesto (no es resolucion firme, solo propuesta).\n"
-        "5. Si la informacion es insuficiente o afecta a varios organismos, usa "
-        "\"Competencia por confirmar\".\n"
-        "6. Evalua nivel_urgencia como \"baja\", \"media\" o \"alta\" segun riesgo y reversibilidad.\n"
-        "7. Si el texto contiene informacion personal o sensible, marca \"requiere_revision_privacidad\": true.\n" \
-        "8. Si el texto contiene palabrotas, insultos o lenguaje ofensivo, sustituyelos por \"[lenguaje ofensivo eliminado]\".\n"
-        "9. Si el texto contiene lenguaje discriminatorio, sustituyelos por \"[lenguaje discriminatorio eliminado]\".\n"
-        "10. Si el texto contiene informacion que pueda ser considerada como noticia falsa,inverosimil(NO EXISTEN LOS HOMBRES LAGARTO) o fantasiosa pon requiere_revision_privacidad: true.\n"
-        "No clasifiques por nacionalidad, origen, ideologia o religion.\n\n"
+        "Clasifica esta sugerencia del buzon ciudadano. Elige exactamente una categoria y hasta 2 subcategorias "
+        "de la lista, sin inventar valores. Propón organismo y urgencia.\n\n"
         f"Categorias disponibles:\n{categorias}\n\n"
-        f"Clasificacion introducida por el usuario:\n"
-        f"- categoria: {user_category or '(no disponible)'}\n"
-        f"- subcategorias: {user_subcategories or '(sin subcategoria)'}\n\n"
-        f"Texto de la comunicacion:\n\"\"\"{text}\"\"\"\n\n"
-        "Responde SOLO con un JSON valido, sin explicaciones, con estas claves exactas:\n"
+        f"Texto desidentificado:\n\"\"\"{text}\"\"\"\n\n"
+        "Responde SOLO con JSON valido:\n"
         "{\"categoria_principal\": \"...\", \"subcategorias\": [\"...\"], "
-        "\"decision_comparacion\": \"usuario|llm\", "
-        "\"justificacion_comparacion\": \"...\", "
-        "\"organismo_propuesto\": \"...\", \"nivel_urgencia\": \"baja|media|alta\", "
-        "\"texto_desidentificado\": \"...\", \"requiere_revision_privacidad\": true|false}"
+        "\"organismo_propuesto\": \"...\", \"nivel_urgencia\": \"baja|media|alta\"}"
+    )
+
+
+def build_comparison_prompt(
+    text: str,
+    user_category: str,
+    user_subcategories: str,
+    llm_category: str,
+    llm_subcategories: str,
+) -> str:
+    return (
+        "Compara dos clasificaciones para la misma sugerencia y elige la más adecuada según el texto.\n"
+        f"Texto:\n\"\"\"{text}\"\"\"\n\n"
+        f"Clasificación del usuario: {user_category} / {user_subcategories}\n"
+        f"Clasificación del LLM: {llm_category} / {llm_subcategories}\n\n"
+        "Responde SOLO con JSON valido: "
+        "{\"decision_comparacion\": \"usuario|llm\", "
+        "\"justificacion_comparacion\": \"...\"}"
     )
 
 
@@ -250,22 +283,37 @@ def normalize_subcategories(value: object, category: str) -> str:
 
 
 def classify_text(
-    text: str, user_category: str = "", user_subcategories: str = ""
+    text: str,
+    user_category: str = "",
+    user_subcategories: str = "",
+    expected_result: str = "",
 ) -> dict:
-    """Aplica el paso de clasificacion doble (seccion 4.2.4) con fallback seguro."""
-    prompt = build_classification_prompt(text, user_category, user_subcategories)
+    """Clasifica el texto y compara la propuesta con la del usuario."""
     try:
-        raw = generate_response(prompt, max_new_tokens=400)
-        data = parse_model_json(raw)
-        llm_category = data.get("categoria_principal", "Competencia por confirmar")
+        classification = parse_model_json(
+            generate_response(build_classification_prompt(text), max_new_tokens=300)
+        )
+        llm_category = classification.get("categoria_principal", "Competencia por confirmar")
         if llm_category not in VALID_CATEGORIES:
             llm_category = "Competencia por confirmar"
         llm_subcategories = normalize_subcategories(
-            data.get("subcategorias", data.get("subcategoria", "")), llm_category
+            classification.get("subcategorias", classification.get("subcategoria", "")),
+            llm_category,
         )
-        desidentified_text, _ = sanitize_text(data.get("texto_desidentificado", text))
         user_subcategories = normalize_subcategories(user_subcategories, user_category)
-        decision = data.get("decision_comparacion", "llm")
+        comparison = parse_model_json(
+            generate_response(
+                build_comparison_prompt(
+                    text,
+                    user_category,
+                    user_subcategories,
+                    llm_category,
+                    llm_subcategories,
+                ),
+                max_new_tokens=200,
+            )
+        )
+        decision = comparison.get("decision_comparacion", "llm")
         selected_category = user_category if decision == "usuario" and user_category else llm_category
         selected_subcategories = (
             user_subcategories if decision == "usuario" and user_category else llm_subcategories
@@ -278,11 +326,12 @@ def classify_text(
             "categoria_usuario": user_category,
             "subcategoria_usuario": user_subcategories,
             "decision_comparacion": decision if decision in {"usuario", "llm"} else "llm",
-            "justificacion_comparacion": data.get("justificacion_comparacion", ""),
-            "organismo_propuesto": data.get("organismo_propuesto", "Unidad gestora del buzon (pendiente de asignacion)"),
-            "nivel_urgencia": data.get("nivel_urgencia", "media"),
-            "texto_desidentificado": desidentified_text,
-            "requiere_revision_privacidad": bool(data.get("requiere_revision_privacidad", True)),
+            "justificacion_comparacion": comparison.get("justificacion_comparacion", ""),
+            "organismo_propuesto": classification.get("organismo_propuesto", "Unidad gestora del buzon (pendiente de asignacion)"),
+            "nivel_urgencia": classification.get("nivel_urgencia", "media"),
+            "texto_desidentificado": text,
+            "resultado_esperado_desidentificado": expected_result,
+            "requiere_revision_privacidad": False,
         }
     except (ValueError, json.JSONDecodeError):
         # Fallback conservador: se marca para revision humana en vez de perder el registro.
@@ -298,6 +347,7 @@ def classify_text(
             "organismo_propuesto": "Unidad gestora del buzon (pendiente de asignacion)",
             "nivel_urgencia": "media",
             "texto_desidentificado": text,
+            "resultado_esperado_desidentificado": expected_result,
             "requiere_revision_privacidad": True,
         }
 
@@ -337,6 +387,43 @@ def mark_as_processed(ids: list) -> None:
         connection.close()"""
 
 
+def sanitize_one_with_llm(text: str, field_name: str) -> tuple[str, bool]:
+    sanitized_text, found = sanitize_text(text)
+    try:
+        data = parse_model_json(
+            generate_response(build_privacy_prompt(sanitized_text, field_name), max_new_tokens=250)
+        )
+        candidate = data.get("texto_saneado")
+        if not isinstance(candidate, str) or not candidate.strip():
+            raise ValueError("El LLM no devolvio un texto saneado")
+        lowered = candidate.lower()
+        if any(
+            marker in lowered
+            for marker in (
+                "categoria_principal",
+                "decision_comparacion",
+                "organismo_propuesto",
+                "respuesta:",
+                "no puedo",
+            )
+        ):
+            raise ValueError("El LLM devolvio una respuesta en lugar del texto")
+        candidate, candidate_found = sanitize_text(candidate)
+        return candidate, found or candidate_found or candidate != sanitized_text or bool(
+            data.get("requiere_revision_privacidad", False)
+        )
+    except (ValueError, json.JSONDecodeError, TypeError, AttributeError):
+        return sanitized_text, True
+
+
+def sanitize_with_llm(text: str, expected_result: str) -> tuple[str, str, bool]:
+    sanitized_text, text_found = sanitize_one_with_llm(text, "texto de la sugerencia")
+    sanitized_expected, expected_found = sanitize_one_with_llm(
+        expected_result, "resultado esperado"
+    )
+    return sanitized_text, sanitized_expected, text_found or expected_found
+
+
 def process_records(df: pd.DataFrame, text_column: str) -> dict:
     if text_column not in df.columns:
         raise ValueError(f"La columna '{text_column}' no existe. Columnas disponibles: {list(df.columns)}")
@@ -347,9 +434,11 @@ def process_records(df: pd.DataFrame, text_column: str) -> dict:
 
     for _, row in df.iterrows():
         original_text = str(row[text_column])
-        pre_redacted, pii_found = sanitize_text(original_text)
+        pre_redacted = str(row[text_column])
         expected_result = str(row.get(COLUMNA_RESULTADO_ESPERADO, ""))
-        redacted_expected_result, expected_pii_found = sanitize_text(expected_result)
+        pre_redacted, redacted_expected_result, privacy_found = sanitize_with_llm(
+            pre_redacted, expected_result
+        )
         user_category = row.get(COLUMNA_CATEGORIA_USUARIO, "")
         user_subcategories = row.get(COLUMNA_SUBCATEGORIAS_USUARIO, "")
         user_category = "" if pd.isna(user_category) else str(user_category).strip()
@@ -374,9 +463,14 @@ def process_records(df: pd.DataFrame, text_column: str) -> dict:
             estado = "escalado_emergencia"
             accion = "Mostrado canal de emergencia al ciudadano; alerta priorizada para revision humana"
         else:
-            record = classify_text(pre_redacted, user_category, user_subcategories)
+            record = classify_text(
+                pre_redacted,
+                user_category,
+                user_subcategories,
+                redacted_expected_result,
+            )
             record["requiere_revision_privacidad"] = (
-                record["requiere_revision_privacidad"] or pii_found or expected_pii_found
+                record["requiere_revision_privacidad"] or privacy_found
             )
             estado = "pendiente_revision"
             accion = ""
