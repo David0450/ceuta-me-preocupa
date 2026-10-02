@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Database\Eloquent\Relations\Relation;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -32,5 +33,11 @@ class AppServiceProvider extends ServiceProvider
                 Limit::perHour(10)->by($request->ip()),
             ];
         });
+
+        Relation::enforceMorphMap([
+            'categoria'    => \App\Models\Categoria::class,
+            'subcategoria' => \App\Models\Subcategoria::class,
+            'organismo'    => \App\Models\Organismo::class,
+        ]);
     }
 }

@@ -16,4 +16,9 @@ class Organismo extends Model
     {
         return $this->hasMany(Sugerencia::class);
     }
+
+    public function prediccionesIa()
+    {
+        return $this->morphMany(PrediccionIa::class, 'predecible');
+    }
 }

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Sugerencia extends Model
 {
@@ -25,6 +26,7 @@ class Sugerencia extends Model
     protected $casts = [
         'fecha_recepcion'  => 'datetime',
         'fecha_aceptacion' => 'datetime',
+        'ia_procesada_at' => 'datetime',
     ];
 
     public function categoria(): BelongsTo
@@ -51,5 +53,11 @@ class Sugerencia extends Model
     public function contacto(): HasOne
     {
         return $this->hasOne(Contacto::class);
+    }
+
+
+    public function prediccionesIa(): HasMany
+    {
+        return $this->hasMany(PrediccionIa::class);
     }
 }
