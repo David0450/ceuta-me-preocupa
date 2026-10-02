@@ -115,6 +115,15 @@ PII_PATTERNS = [
     re.compile(r"\b(?:\+?\d{2,3}[ -]?)?\d{9}\b"),                  # telefono
 ]
 
+OFFENSIVE_PATTERNS = [
+    re.compile(r"\bhijo(?:\s+de)?\s+puta\b", re.IGNORECASE),
+    re.compile(r"\bputa\b", re.IGNORECASE),
+    re.compile(r"\bputo\b", re.IGNORECASE),
+    re.compile(r"\bmaricon(?:es)?\b", re.IGNORECASE),
+    re.compile(r"\bidiota\b", re.IGNORECASE),
+    re.compile(r"\bimbecil\b", re.IGNORECASE),
+]
+
 # Cuantizacion 4-bit: el modelo en bf16 (~16GB) no cabe en 8GB de VRAM
 quant_config = BitsAndBytesConfig(
     load_in_4bit=True,
@@ -160,6 +169,14 @@ def redact_pii(text: str) -> tuple[str, bool]:
         redacted, n = pattern.subn("[dato personal eliminado]", redacted)
         found = found or n > 0
     return redacted, found
+
+
+def sanitize_text(text: str) -> tuple[str, bool]:
+    sanitized, found = redact_pii(text)
+    for pattern in OFFENSIVE_PATTERNS:
+        sanitized, count = pattern.subn("[lenguaje ofensivo eliminado]", sanitized)
+        found = found or count > 0
+    return sanitized, found
 
 
 def is_emergency(text: str) -> bool:
@@ -246,6 +263,7 @@ def classify_text(
         llm_subcategories = normalize_subcategories(
             data.get("subcategorias", data.get("subcategoria", "")), llm_category
         )
+        desidentified_text, _ = sanitize_text(data.get("texto_desidentificado", text))
         user_subcategories = normalize_subcategories(user_subcategories, user_category)
         decision = data.get("decision_comparacion", "llm")
         selected_category = user_category if decision == "usuario" and user_category else llm_category
@@ -263,7 +281,7 @@ def classify_text(
             "justificacion_comparacion": data.get("justificacion_comparacion", ""),
             "organismo_propuesto": data.get("organismo_propuesto", "Unidad gestora del buzon (pendiente de asignacion)"),
             "nivel_urgencia": data.get("nivel_urgencia", "media"),
-            "texto_desidentificado": data.get("texto_desidentificado", text),
+            "texto_desidentificado": desidentified_text,
             "requiere_revision_privacidad": bool(data.get("requiere_revision_privacidad", True)),
         }
     except (ValueError, json.JSONDecodeError):
@@ -329,9 +347,9 @@ def process_records(df: pd.DataFrame, text_column: str) -> dict:
 
     for _, row in df.iterrows():
         original_text = str(row[text_column])
-        pre_redacted, pii_found = redact_pii(original_text)
+        pre_redacted, pii_found = sanitize_text(original_text)
         expected_result = str(row.get(COLUMNA_RESULTADO_ESPERADO, ""))
-        redacted_expected_result, expected_pii_found = redact_pii(expected_result)
+        redacted_expected_result, expected_pii_found = sanitize_text(expected_result)
         user_category = row.get(COLUMNA_CATEGORIA_USUARIO, "")
         user_subcategories = row.get(COLUMNA_SUBCATEGORIAS_USUARIO, "")
         user_category = "" if pd.isna(user_category) else str(user_category).strip()
