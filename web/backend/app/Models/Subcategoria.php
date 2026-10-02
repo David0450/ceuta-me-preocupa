@@ -22,4 +22,9 @@ class Subcategoria extends Model
         return $this->belongsToMany(Sugerencia::class, 'sugerencia_subcategoria')
                     ->withTimestamps();
     }
+
+    public function prediccionesIa()
+    {
+        return $this->morphMany(PrediccionIa::class, 'predecible');
+    }
 }
