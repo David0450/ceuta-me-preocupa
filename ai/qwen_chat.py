@@ -11,13 +11,16 @@ describen las secciones 4 y 5 del protocolo.
 import hashlib
 import json
 import re
+import unicodedata
 import uuid
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 
 import pandas as pd
 import pymysql
 import torch
+from pypdf import PdfReader
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 from db_config import DB_CONFIG, TABLA_COMUNICACIONES
@@ -26,6 +29,7 @@ MODEL_NAME = "Qwen/Qwen3-8B"
 
 BASE_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR = BASE_DIR / "salida_buzon"
+CALLEJERO_PATH = BASE_DIR / "callejerofiscal.pdf"
 
 # Ajustar al esquema real de phpMyAdmin.
 COLUMNA_ID = "id"
@@ -45,7 +49,9 @@ INNER JOIN categorias AS C ON S.categoria_id=C.id
 INNER JOIN sugerencia_subcategoria AS SB ON S.id=SB.sugerencia_id 
 INNER JOIN subcategorias AS SU ON SB.subcategoria_id=SU.id
 WHERE D.procesado=0
-GROUP BY D.id,D.sugerencia_id,D.texto_original,D.resultado_esperado_original,D.procesado,C.nombre;
+GROUP BY D.id,D.sugerencia_id,D.texto_original,D.resultado_esperado_original,D.procesado,C.nombre
+ORDER BY D.id DESC
+LIMIT 7;
 """
 
 # Categorias y subcategorias disponibles en las tablas de la base de datos.
@@ -171,13 +177,115 @@ def generate_response(prompt: str, system_prompt: str | None = None, max_new_tok
 
 
 def redact_pii(text: str) -> tuple[str, bool]:
-    """Sustituye emails/telefonos/DNI-NIE por marcador. Devuelve (texto, se_encontro_algo)."""
+    """Sustituye datos personales y calles/barrios del callejero por un marcador."""
     redacted = text
     found = False
+    redacted, callejero_found = redact_callejero(redacted)
+    found = found or callejero_found
     for pattern in PII_PATTERNS:
         redacted, n = pattern.subn("[dato personal eliminado]", redacted)
         found = found or n > 0
     return redacted, found
+
+
+def normalize_match_text(text: str) -> tuple[str, list[int]]:
+    normalized = []
+    source_positions = []
+    for source_index, character in enumerate(text):
+        if character == "\ufffd":
+            normalized.append(character)
+            source_positions.append(source_index)
+            continue
+        for folded_character in unicodedata.normalize("NFKD", character).casefold():
+            if unicodedata.category(folded_character).startswith("M"):
+                continue
+            if folded_character.isalnum():
+                normalized.append(folded_character)
+                source_positions.append(source_index)
+            elif normalized and normalized[-1] != " ":
+                normalized.append(" ")
+                source_positions.append(source_index)
+
+    while normalized and normalized[-1] == " ":
+        normalized.pop()
+        source_positions.pop()
+    return "".join(normalized), source_positions
+
+
+@lru_cache(maxsize=1)
+def load_callejero_patterns() -> tuple[re.Pattern, ...]:
+    if not CALLEJERO_PATH.is_file():
+        raise FileNotFoundError(f"No se encuentra el callejero fiscal: {CALLEJERO_PATH}")
+
+    names = set()
+    reader = PdfReader(CALLEJERO_PATH)
+    for page in reader.pages:
+        lines = (page.extract_text(extraction_mode="layout") or "").splitlines()
+        header = next((line for line in lines if "NOMBRE CALLE" in line), None)
+        if header is None:
+            continue
+
+        street_start = header.index("NOMBRE CALLE")
+        range_start = header.index("RANGO NUMEROS")
+        neighborhood_start = header.rfind("BARRIADA")
+        category_start = header.index("CATEGORIA")
+        for line in lines:
+            fields = line.split()
+            if len(fields) < 5 or not all(field.isdigit() for field in fields[:4]):
+                continue
+
+            street = line[street_start:range_start].strip()
+            neighborhood = re.sub(
+                r"^BDA\.?\s*", "", line[neighborhood_start:category_start].strip(), flags=re.IGNORECASE
+            )
+            if street:
+                names.add(street)
+            if neighborhood:
+                names.add(neighborhood)
+
+    patterns = set()
+    for name in names:
+        normalized_name, _ = normalize_match_text(name)
+        if len(normalized_name.replace(" ", "")) < 3:
+            continue
+        variants = {normalized_name}
+        name_words = normalized_name.split()
+        if name_words and name_words[0] in {"av", "avda"}:
+            variants.add("avenida " + " ".join(name_words[1:]))
+            variants.add(" ".join(name_words[1:]))
+        for variant in variants:
+            if not variant:
+                continue
+            expression = r"(?<!\w)" + r"\s+".join(
+                re.escape(word).replace("\ufffd", r"\w") for word in variant.split()
+            ) + r"(?!\w)"
+            patterns.add(re.compile(expression))
+
+    if not patterns:
+        raise ValueError(f"No se pudieron extraer calles ni barrios de {CALLEJERO_PATH}")
+    return tuple(sorted(patterns, key=lambda pattern: len(pattern.pattern), reverse=True))
+
+
+def redact_callejero(text: str) -> tuple[str, bool]:
+    normalized_text, source_positions = normalize_match_text(text)
+    spans = set()
+    for pattern in load_callejero_patterns():
+        for match in pattern.finditer(normalized_text):
+            spans.add((source_positions[match.start()], source_positions[match.end() - 1] + 1))
+
+    if not spans:
+        return text, False
+
+    merged_spans = []
+    for start, end in sorted(spans):
+        if merged_spans and start <= merged_spans[-1][1]:
+            merged_spans[-1] = (merged_spans[-1][0], max(merged_spans[-1][1], end))
+        else:
+            merged_spans.append((start, end))
+
+    for start, end in reversed(merged_spans):
+        text = text[:start] + "[dato personal eliminado]" + text[end:]
+    return text, True
 
 
 def sanitize_text(text: str) -> tuple[str, bool]:
@@ -204,20 +312,18 @@ def build_privacy_prompt(text: str, field_name: str) -> str:
         "(por ejemplo, cargo concreto junto con lugar, fecha o hecho singular). Incluye nombres "
         "de terceros mencionados y de personas publicas si el contexto las vincula al relato. "
         "Elimina tambien direcciones exactas, telefonos, correos, DNI/NIE y detalles de vida privada. "
+        "No censures la palabra \"Ceuta\" ni otras referencias geograficas generales de la ciudad. "
         "Generaliza fechas y horas exactas y lugares o cargos demasiado concretos cuando puedan "
         "facilitar la reidentificacion; no los conserves literalmente.\n"
         "Sustituye lenguaje ofensivo por \"[lenguaje ofensivo eliminado]\" y lenguaje discriminatorio "
         "por \"[lenguaje discriminatorio eliminado]\". Conserva el sentido no identificativo del "
         "relato, pero no la literalidad de detalles que puedan identificar a alguien. No respondas "
         "al contenido, no inventes datos ni añadas explicaciones.\n"
-        "Marca requiere_revision_privacidad como true si has eliminado o generalizado datos, "
-        "si quedan indicios de identificacion indirecta, lenguaje discriminatorio o afirmaciones "
-        "inverosimiles. Si dudas, prioriza la privacidad y marca revision.\n\n"
+        "Si dudas, prioriza la privacidad.\n\n"
         f"Campo: {field_name}\n"
         f"Texto original:\n\"\"\"{text}\"\"\"\n\n"
         "Responde SOLO con JSON valido y estas claves exactas:\n"
-        "{\"texto_saneado\": \"el mismo texto con las sustituciones\", "
-        "\"requiere_revision_privacidad\": true|false}"
+        "{\"texto_saneado\": \"el mismo texto con las sustituciones\"}"
     )
 
 
@@ -252,11 +358,108 @@ def build_comparison_prompt(
     )
 
 
+def build_privacy_review_prompt(
+    original_text: str,
+    sanitized_text: str,
+    original_expected: str,
+    sanitized_expected: str,
+) -> str:
+    return (
+        "Determina si se necesita revision humana porque se anonimizaron datos personales o "
+        "detalles que permitan identificar a alguien. Responde true exclusivamente si se sustituyo "
+        "o generalizo informacion identificativa. Ignora cambios de redaccion, correcciones, "
+        "eliminacion de lenguaje ofensivo o discriminatorio y cualquier otro cambio que no sea "
+        "anonimizacion. Si no hay evidencia clara de anonimización, responde false.\n\n"
+        f"Mensaje original:\n\"\"\"{original_text}\"\"\"\n\n"
+        f"Mensaje saneado:\n\"\"\"{sanitized_text}\"\"\"\n\n"
+        f"Resultado esperado original:\n\"\"\"{original_expected}\"\"\"\n\n"
+        f"Resultado esperado saneado:\n\"\"\"{sanitized_expected}\"\"\"\n\n"
+        "Responde SOLO con JSON valido: "
+        "{\"requiere_revision_privacidad\": true|false}"
+    )
+
+
+def build_classification_mismatch_prompt(
+    user_category: str,
+    user_subcategories: str,
+    llm_category: str,
+    llm_subcategories: str,
+) -> str:
+    return (
+        "Determina si hay discordancia entre la categoria y las subcategorias asignadas por el "
+        "usuario y las propuestas por el LLM. Activa la marca si difiere la categoria o si las "
+        "subcategorias no coinciden; ignora solo el orden de las subcategorias. Considera que "
+        "un valor presente en un lado y ausente en el otro es una discordancia.\n\n"
+        f"Categoria del usuario: {user_category}\n"
+        f"Subcategorias del usuario: {user_subcategories}\n"
+        f"Categoria del LLM: {llm_category}\n"
+        f"Subcategorias del LLM: {llm_subcategories}\n\n"
+        "Responde SOLO con JSON valido: "
+        "{\"discordancia_clasificacion\": true|false}"
+    )
+
+
+def build_keywords_prompt(text: str, expected_result: str) -> str:
+    return (
+        "Extrae exactamente dos palabras clave representativas de cada texto. Trata ambos textos "
+        "por separado: no uses palabras de uno para completar el otro. Elige terminos que aparezcan "
+        "literalmente en el texto correspondiente, evita palabras vacias y no inventes ni infieras "
+        "terminos.\n\n"
+        f"Sugerencia:\n\"\"\"{text}\"\"\"\n\n"
+        f"Resultado esperado:\n\"\"\"{expected_result}\"\"\"\n\n"
+        "Responde SOLO con JSON valido y exactamente dos palabras por lista: "
+        "{\"palabras_clave_sugerencia\": [\"...\", \"...\"], "
+        "\"palabras_clave_resultado_esperado\": [\"...\", \"...\"]}"
+    )
+
+
 def parse_model_json(raw_response: str) -> dict:
     match = re.search(r"\{.*\}", raw_response, re.DOTALL)
     if not match:
         raise ValueError("El modelo no devolvio JSON")
     return json.loads(match.group(0))
+
+
+def request_boolean_flag(prompt: str, flag_name: str, fallback: bool) -> bool:
+    try:
+        response = parse_model_json(generate_response(prompt, max_new_tokens=100))
+        value = response.get(flag_name)
+        if isinstance(value, bool):
+            return value
+    except Exception:
+        return fallback
+    return fallback
+
+
+def request_keywords(text: str, expected_result: str) -> tuple[str, str]:
+    try:
+        response = parse_model_json(
+            generate_response(build_keywords_prompt(text, expected_result), max_new_tokens=120)
+        )
+        keyword_fields = (
+            ("palabras_clave_sugerencia", text),
+            ("palabras_clave_resultado_esperado", expected_result),
+        )
+        cleaned_fields = []
+        for field_name, source_text in keyword_fields:
+            keywords = response.get(field_name)
+            if not isinstance(keywords, list):
+                return "", ""
+            cleaned = []
+            for keyword in keywords:
+                if not isinstance(keyword, str):
+                    return "", ""
+                keyword = keyword.strip()
+                if not keyword or keyword.casefold() not in source_text.casefold():
+                    return "", ""
+                if keyword.casefold() not in {item.casefold() for item in cleaned}:
+                    cleaned.append(keyword)
+            if len(cleaned) != 2:
+                return "", ""
+            cleaned_fields.append("; ".join(cleaned))
+        return cleaned_fields[0], cleaned_fields[1]
+    except Exception:
+        return "", ""
 
 
 def normalize_subcategories(value: object, category: str) -> str:
@@ -331,7 +534,6 @@ def classify_text(
             "nivel_urgencia": classification.get("nivel_urgencia", "media"),
             "texto_desidentificado": text,
             "resultado_esperado_desidentificado": expected_result,
-            "requiere_revision_privacidad": False,
         }
     except (ValueError, json.JSONDecodeError):
         # Fallback conservador: se marca para revision humana en vez de perder el registro.
@@ -348,13 +550,7 @@ def classify_text(
             "nivel_urgencia": "media",
             "texto_desidentificado": text,
             "resultado_esperado_desidentificado": expected_result,
-            "requiere_revision_privacidad": True,
         }
-
-
-def duplicate_hash(text: str) -> str:
-    normalized = re.sub(r"\W+", " ", text.lower()).strip()
-    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
 def fetch_records(query: str) -> pd.DataFrame:
@@ -387,8 +583,8 @@ def mark_as_processed(ids: list) -> None:
         connection.close()"""
 
 
-def sanitize_one_with_llm(text: str, field_name: str) -> tuple[str, bool]:
-    sanitized_text, found = sanitize_text(text)
+def sanitize_one_with_llm(text: str, field_name: str) -> str:
+    sanitized_text, _ = sanitize_text(text)
     try:
         data = parse_model_json(
             generate_response(build_privacy_prompt(sanitized_text, field_name), max_new_tokens=250)
@@ -408,20 +604,24 @@ def sanitize_one_with_llm(text: str, field_name: str) -> tuple[str, bool]:
             )
         ):
             raise ValueError("El LLM devolvio una respuesta en lugar del texto")
-        candidate, candidate_found = sanitize_text(candidate)
-        return candidate, found or candidate_found or candidate != sanitized_text or bool(
-            data.get("requiere_revision_privacidad", False)
-        )
+        candidate, _ = sanitize_text(candidate)
+        return candidate
     except (ValueError, json.JSONDecodeError, TypeError, AttributeError):
-        return sanitized_text, True
+        return sanitized_text
 
 
 def sanitize_with_llm(text: str, expected_result: str) -> tuple[str, str, bool]:
-    sanitized_text, text_found = sanitize_one_with_llm(text, "texto de la sugerencia")
-    sanitized_expected, expected_found = sanitize_one_with_llm(
+    _, text_personal_data_found = redact_pii(text)
+    _, expected_personal_data_found = redact_pii(expected_result)
+    sanitized_text = sanitize_one_with_llm(text, "texto de la sugerencia")
+    sanitized_expected = sanitize_one_with_llm(
         expected_result, "resultado esperado"
     )
-    return sanitized_text, sanitized_expected, text_found or expected_found
+    return (
+        sanitized_text,
+        sanitized_expected,
+        text_personal_data_found or expected_personal_data_found,
+    )
 
 
 def process_records(df: pd.DataFrame, text_column: str) -> dict:
@@ -429,7 +629,6 @@ def process_records(df: pd.DataFrame, text_column: str) -> dict:
         raise ValueError(f"La columna '{text_column}' no existe. Columnas disponibles: {list(df.columns)}")
 
     now = datetime.now(timezone.utc).isoformat()
-    seen_hashes: dict[str, int] = {}
     records = []
 
     for _, row in df.iterrows():
@@ -438,6 +637,20 @@ def process_records(df: pd.DataFrame, text_column: str) -> dict:
         expected_result = str(row.get(COLUMNA_RESULTADO_ESPERADO, ""))
         pre_redacted, redacted_expected_result, privacy_found = sanitize_with_llm(
             pre_redacted, expected_result
+        )
+        privacy_review = request_boolean_flag(
+            build_privacy_review_prompt(
+                original_text,
+                pre_redacted,
+                expected_result,
+                redacted_expected_result,
+            ),
+            "requiere_revision_privacidad",
+            privacy_found,
+        ) or privacy_found
+        suggestion_keywords, expected_result_keywords = request_keywords(
+            pre_redacted,
+            redacted_expected_result,
         )
         user_category = row.get(COLUMNA_CATEGORIA_USUARIO, "")
         user_subcategories = row.get(COLUMNA_SUBCATEGORIAS_USUARIO, "")
@@ -452,7 +665,6 @@ def process_records(df: pd.DataFrame, text_column: str) -> dict:
                 "organismo_propuesto": "Canal de emergencias (112) - no se procesa como sugerencia ordinaria",
                 "nivel_urgencia": "alta",
                 "texto_desidentificado": pre_redacted,
-                "requiere_revision_privacidad": True,
                 "categoria_llm": "Seguridad",
                 "subcategoria_llm": "",
                 "categoria_usuario": user_category,
@@ -469,15 +681,33 @@ def process_records(df: pd.DataFrame, text_column: str) -> dict:
                 user_subcategories,
                 redacted_expected_result,
             )
-            record["requiere_revision_privacidad"] = (
-                record["requiere_revision_privacidad"] or privacy_found
-            )
             estado = "pendiente_revision"
             accion = ""
 
-        text_hash = duplicate_hash(record["texto_desidentificado"])
-        posible_duplicado = text_hash in seen_hashes
-        seen_hashes[text_hash] = seen_hashes.get(text_hash, 0) + 1
+        user_subcategory_set = {
+            value.strip()
+            for value in record["subcategoria_usuario"].split(";")
+            if value.strip()
+        }
+        llm_subcategory_set = {
+            value.strip()
+            for value in record["subcategoria_llm"].split(";")
+            if value.strip()
+        }
+        categories_differ = (
+            record["categoria_usuario"] != record["categoria_llm"]
+            or user_subcategory_set != llm_subcategory_set
+        )
+        classification_mismatch = request_boolean_flag(
+            build_classification_mismatch_prompt(
+                record["categoria_usuario"],
+                record["subcategoria_usuario"],
+                record["categoria_llm"],
+                record["subcategoria_llm"],
+            ),
+            "discordancia_clasificacion",
+            categories_differ,
+        ) or categories_differ
 
         records.append({
             "categoria_llm": record["categoria_llm"],
@@ -491,8 +721,10 @@ def process_records(df: pd.DataFrame, text_column: str) -> dict:
             "nivel_urgencia": record["nivel_urgencia"],
             "texto_desidentificado": record["texto_desidentificado"],
             "resultado_esperado_desidentificado": redacted_expected_result,
-            "posible_duplicado": posible_duplicado,
-            "requiere_revision_privacidad": record["requiere_revision_privacidad"],
+            "requiere_revision_privacidad": privacy_review,
+            "discordancia_clasificacion": classification_mismatch,
+            "palabras_clave_sugerencia": suggestion_keywords,
+            "palabras_clave_resultado_esperado": expected_result_keywords,
         })
 
     nivel_b = pd.DataFrame(records)
