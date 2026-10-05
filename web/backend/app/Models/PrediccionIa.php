@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class PrediccionIa extends Model
 {
-    protected $table = 'predicciones_ia'; // Laravel inferiría "prediccion_ias"
+    protected $table = 'predicciones_ia';
 
     protected $fillable = [
         'sugerencia_id', 'predecible_type', 'predecible_id',
