@@ -18,7 +18,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // La sesión de MySQL usa la misma hora que la aplicación (Europe/Madrid),
+        // así coinciden las fechas que escribe Laravel y las que pone MySQL por
+        // defecto (CURRENT_TIMESTAMP, p. ej. en los INSERT de la IA). El desfase
+        // se calcula en cada petición para respetar el cambio de hora.
+        foreach (['mysql', 'mariadb'] as $conexion) {
+            config(["database.connections.{$conexion}.timezone" => now()->format('P')]);
+        }
     }
 
     /**
