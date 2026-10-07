@@ -34,6 +34,16 @@ class UserFactory extends Factory
     }
 
     /**
+     * Cuenta con acceso al panel de revisión de sugerencias.
+     */
+    public function revisor(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'es_revisor' => true,
+        ]);
+    }
+
+    /**
      * Indicate that the model's email address should be unverified.
      */
     public function unverified(): static

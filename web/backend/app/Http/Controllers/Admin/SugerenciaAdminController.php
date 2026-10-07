@@ -22,18 +22,11 @@ class SugerenciaAdminController extends Controller
     }
 
     /**
-     * Ficha de una sugerencia, ya con los datos sensibles.
+     * Pantalla de revisión. El componente Livewire carga los datos que necesita;
+     * el texto original y el contacto solo se muestran a petición (y se registra).
      */
     public function show(Sugerencia $sugerencia)
     {
-        $sugerencia->load([
-            'categoria',
-            'subcategorias',
-            'organismo',
-            'datoOriginal',
-            'contacto',
-        ]);
-
         return view('admin.sugerencias.show', compact('sugerencia'));
     }
 }

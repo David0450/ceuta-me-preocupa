@@ -12,7 +12,6 @@ Route::post('/sugerencias', [SugerenciaController::class, 'store'])
     ->name('sugerencias.store');
 
 
-Route::get('/sugerencias/{sugerencia}', [SugerenciaAdminController::class, 'show'])->name('admin.sugerencias.show')->middleware(['auth', 'verified']);
 
 Route::view('/privacidad', 'privacidad')->name('privacidad');
 
@@ -20,7 +19,14 @@ Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::get('/sugerencias', [SugerenciaAdminController::class, 'index'])->name('admin.sugerencias.index')->middleware(['auth', 'verified']);
+// Panel de revisión: solo usuarios con es_revisor = true (ver AppServiceProvider).
+Route::middleware(['auth', 'verified', 'can:revisar-sugerencias'])->group(function () {
+    Route::get('/sugerencias', [SugerenciaAdminController::class, 'index'])->name('admin.sugerencias.index');
+    // withTrashed: permite abrir también las sugerencias que están en la papelera.
+    Route::get('/sugerencias/{sugerencia}', [SugerenciaAdminController::class, 'show'])
+        ->withTrashed()
+        ->name('admin.sugerencias.show');
+});
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
