@@ -8,7 +8,8 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Facades\Gate;
+use App\Models\User;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -34,10 +35,7 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
-        Relation::enforceMorphMap([
-            'categoria'    => \App\Models\Categoria::class,
-            'subcategoria' => \App\Models\Subcategoria::class,
-            'organismo'    => \App\Models\Organismo::class,
-        ]);
+        // Acceso al panel de revisión: solo cuentas marcadas como revisoras.
+        Gate::define('revisar-sugerencias', fn (User $user): bool => (bool) $user->es_revisor);
     }
 }
