@@ -36,6 +36,10 @@ class SugerenciaController extends Controller
             $sugerencia = Sugerencia::create([
                 'fecha_recepcion'          => now(),
                 'categoria_id'             => $datos['categoria_id'],
+                // Copia fija de lo que eligió la persona: categoria_id y el pivote
+                // pueden cambiar al revisar, estas dos columnas no.
+                'categoria_ciudadano_id'   => $datos['categoria_id'],
+                'subcategorias_ciudadano'  => array_map('intval', $datos['subcategorias']),
                 'estado'                   => 'recibido',
                 'version_aviso_privacidad' => 'v1', // llévalo a config cuando cambie el aviso
                 'fecha_aceptacion'         => now(),
