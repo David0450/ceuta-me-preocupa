@@ -10,10 +10,11 @@ describen las secciones 4 y 5 del protocolo.
 
 import hashlib
 import json
+import os
 import re
 import unicodedata
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -24,6 +25,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from db_config import DB_CONFIG, TABLA_COMUNICACIONES
 
 MODEL_NAME = "Qwen/Qwen3-8B"
+HF_TOKEN = os.getenv("HF_TOKEN")
 
 BASE_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR = BASE_DIR / "salida_buzon"
@@ -32,23 +34,24 @@ OUTPUT_DIR = BASE_DIR / "salida_buzon"
 COLUMNA_ID = "id"
 COLUMNA_TEXTO = "texto_original"
 COLUMNA_RESULTADO_ESPERADO = "resultado_esperado_original"
-COLUMNA_CATEGORIA_USUARIO = "categoria_usuario"
-COLUMNA_SUBCATEGORIAS_USUARIO = "subcategorias_usuario"
 COLUMNA_ESTADO = "procesado"
+CSV_COLUMNS = [
+    "categoria_llm",
+    "subcategoria_llm",
+    "organismo_propuesto",
+    "nivel_urgencia",
+    "texto_desidentificado",
+    "resultado_esperado_desidentificado",
+    "palabras_clave_texto",
+    "palabras_clave_sugerencia",
+]
 
 SQL_QUERY = f"""
-SELECT D.id,D.sugerencia_id,D.texto_original,D.resultado_esperado_original,
-D.procesado,C.nombre AS categoria_usuario,
-GROUP_CONCAT(DISTINCT SU.nombre ORDER BY SU.nombre SEPARATOR '; ') AS subcategorias_usuario
-FROM datos_originales AS D 
-INNER JOIN sugerencias AS S ON D.sugerencia_id=S.id 
-INNER JOIN categorias AS C ON S.categoria_id=C.id 
-INNER JOIN sugerencia_subcategoria AS SB ON S.id=SB.sugerencia_id 
-INNER JOIN subcategorias AS SU ON SB.subcategoria_id=SU.id
+SELECT D.id,D.texto_original,D.resultado_esperado_original,D.procesado
+FROM datos_originales AS D
 WHERE D.procesado=0
-GROUP BY D.id,D.sugerencia_id,D.texto_original,D.resultado_esperado_original,D.procesado,C.nombre
-ORDER BY D.id ASC
-LIMIT 7;
+ORDER BY D.id DESC
+LIMIT 16;
 """
 
 # Categorias y subcategorias disponibles en las tablas de la base de datos.
@@ -146,9 +149,10 @@ quant_config = BitsAndBytesConfig(
     bnb_4bit_compute_dtype=torch.bfloat16,
 )
 
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, token=HF_TOKEN)
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
+    token=HF_TOKEN,
     quantization_config=quant_config,
     device_map="cuda",
     low_cpu_mem_usage=True,
@@ -227,11 +231,23 @@ def build_privacy_prompt(text: str, field_name: str) -> str:
         "Aplica estas reglas de forma uniforme:\n"
         "1. Sustituye cada nombre y apellido de persona, nombre de usuario, apodo o forma de "
         "dirigirse a una persona por el literal exacto \"[dato personal eliminado]\". Hazlo "
-        "tambien si esta en minusculas, abreviado, escrito con errores, en una firma o referido "
-        "a un tercero o a una persona publica vinculada al relato. No dejes iniciales ni letras "
-        "del nombre, y no lo sustituyas por guiones, asteriscos, pronombres o descripciones.\n"
-        "   Ejemplo: \"Hable con Juan Perez y con J. Perez\" -> "
-        "\"Hable con [dato personal eliminado] y con [dato personal eliminado]\".\n"
+        "aunque el nombre este completamente en minusculas, abreviado, escrito con errores, "
+        "en una firma o referido a un tercero o a una persona publica vinculada al relato. "
+        "La mayuscula inicial no es necesaria para considerar que una palabra es un nombre. "
+        "Presta especial atencion a nombres y apodos despues de expresiones como \"hablar con\", "
+        "\"la madre de\", \"el hermano de\" o despues de cargos y profesiones como conserje, "
+        "rector o vicerector; tambien a varios nombres unidos por \"y\" o separados por comas. "
+        "No confundas esos cargos o parentescos con el nombre: elimina solo el nombre. No dejes "
+        "iniciales ni letras del nombre, y no lo sustituyas por guiones, asteriscos, pronombres "
+        "o descripciones.\n"
+        "   Ejemplos: \"Hable con Juan Perez y con J. Perez\" -> "
+        "\"Hable con [dato personal eliminado] y con [dato personal eliminado]\"; "
+        "\"hablando con las conserjes choni y marisa\" -> "
+        "\"hablando con las conserjes [dato personal eliminado] y [dato personal eliminado]\"; "
+        "\"la madre del chema\" -> \"la madre del [dato personal eliminado]\"; "
+        "\"rectores fulano y mengano\" -> "
+        "\"rectores [dato personal eliminado] y [dato personal eliminado]\". "
+        "Los ejemplos muestran que debes eliminar el nombre aunque este en minusculas.\n"
         "2. Sustituye tambien telefonos, correos electronicos, DNI/NIE y otros identificadores "
         "personales por \"[dato personal eliminado]\". Elimina o generaliza detalles privados "
         "y fechas, horas, lugares o cargos demasiado concretos cuando puedan identificar a "
@@ -264,65 +280,6 @@ def build_classification_prompt(text: str) -> str:
     )
 
 
-def build_comparison_prompt(
-    text: str,
-    user_category: str,
-    user_subcategories: str,
-    llm_category: str,
-    llm_subcategories: str,
-) -> str:
-    return (
-        "Compara dos clasificaciones para la misma sugerencia y elige la más adecuada según el texto.\n"
-        f"Texto:\n\"\"\"{text}\"\"\"\n\n"
-        f"Clasificación del usuario: {user_category} / {user_subcategories}\n"
-        f"Clasificación del LLM: {llm_category} / {llm_subcategories}\n\n"
-        "Responde SOLO con JSON valido: "
-        "{\"decision_comparacion\": \"usuario|llm\", "
-        "\"justificacion_comparacion\": \"...\"}"
-    )
-
-
-def build_privacy_review_prompt(
-    original_text: str,
-    sanitized_text: str,
-    original_expected: str,
-    sanitized_expected: str,
-) -> str:
-    return (
-        "Determina si se necesita revision humana porque se anonimizaron datos personales o "
-        "detalles que permitan identificar a alguien, o porque el texto original contiene una "
-        "direccion postal que se ha conservado literalmente. Responde true en esos casos. Ignora cambios de redaccion, correcciones, "
-        "eliminacion de lenguaje ofensivo o discriminatorio y cualquier otro cambio que no sea "
-        "anonimizacion. Si no hay evidencia clara de anonimización, responde false.\n\n"
-        f"Mensaje original:\n\"\"\"{original_text}\"\"\"\n\n"
-        f"Mensaje saneado:\n\"\"\"{sanitized_text}\"\"\"\n\n"
-        f"Resultado esperado original:\n\"\"\"{original_expected}\"\"\"\n\n"
-        f"Resultado esperado saneado:\n\"\"\"{sanitized_expected}\"\"\"\n\n"
-        "Responde SOLO con JSON valido: "
-        "{\"requiere_revision_privacidad\": true|false}"
-    )
-
-
-def build_classification_mismatch_prompt(
-    user_category: str,
-    user_subcategories: str,
-    llm_category: str,
-    llm_subcategories: str,
-) -> str:
-    return (
-        "Determina si hay discordancia entre la categoria y las subcategorias asignadas por el "
-        "usuario y las propuestas por el LLM. Activa la marca si difiere la categoria o si alguna "
-        "subcategoria seleccionada por el usuario falta en las propuestas por el LLM. Ignora las "
-        "subcategorias adicionales que proponga el LLM y el orden de las subcategorias.\n\n"
-        f"Categoria del usuario: {user_category}\n"
-        f"Subcategorias del usuario: {user_subcategories}\n"
-        f"Categoria del LLM: {llm_category}\n"
-        f"Subcategorias del LLM: {llm_subcategories}\n\n"
-        "Responde SOLO con JSON valido: "
-        "{\"discordancia_clasificacion\": true|false}"
-    )
-
-
 def build_keywords_prompt(text: str, expected_result: str) -> str:
     keyword_schema = (
         '[{"lema": "...", "tipo": "sustantivo", "forma_en_texto": "..."}, '
@@ -352,18 +309,9 @@ def parse_model_json(raw_response: str) -> dict:
     return json.loads(match.group(0))
 
 
-def request_boolean_flag(prompt: str, flag_name: str, fallback: bool) -> bool:
-    try:
-        response = parse_model_json(generate_response(prompt, max_new_tokens=100))
-        value = response.get(flag_name)
-        if isinstance(value, bool):
-            return value
-    except Exception:
-        return fallback
-    return fallback
-
-
 def request_keywords(text: str, expected_result: str) -> tuple[str, str]:
+    if not text.strip() and not expected_result.strip():
+        return "", ""
     try:
         response = parse_model_json(
             generate_response(build_keywords_prompt(text, expected_result), max_new_tokens=400)
@@ -440,11 +388,17 @@ def normalize_subcategories(value: object, category: str) -> str:
 
 def classify_text(
     text: str,
-    user_category: str = "",
-    user_subcategories: str = "",
-    expected_result: str = "",
 ) -> dict:
-    """Clasifica el texto y compara la propuesta con la del usuario."""
+    """Clasifica el texto sin compararlo con una clasificacion del usuario."""
+    fallback = {
+        "categoria_llm": "Competencia por confirmar",
+        "subcategoria_llm": "",
+        "organismo_propuesto": "Unidad gestora del buzon (pendiente de asignacion)",
+        "nivel_urgencia": "media",
+    }
+    if not text.strip():
+        return fallback
+
     try:
         classification = parse_model_json(
             generate_response(build_classification_prompt(text), max_new_tokens=300)
@@ -456,54 +410,15 @@ def classify_text(
             classification.get("subcategorias", classification.get("subcategoria", "")),
             llm_category,
         )
-        user_subcategories = normalize_subcategories(user_subcategories, user_category)
-        comparison = parse_model_json(
-            generate_response(
-                build_comparison_prompt(
-                    text,
-                    user_category,
-                    user_subcategories,
-                    llm_category,
-                    llm_subcategories,
-                ),
-                max_new_tokens=200,
-            )
-        )
-        decision = comparison.get("decision_comparacion", "llm")
-        selected_category = user_category if decision == "usuario" and user_category else llm_category
-        selected_subcategories = (
-            user_subcategories if decision == "usuario" and user_category else llm_subcategories
-        )
         return {
-            "categoria_principal": selected_category,
-            "subcategoria": selected_subcategories,
             "categoria_llm": llm_category,
             "subcategoria_llm": llm_subcategories,
-            "categoria_usuario": user_category,
-            "subcategoria_usuario": user_subcategories,
-            "decision_comparacion": decision if decision in {"usuario", "llm"} else "llm",
-            "justificacion_comparacion": comparison.get("justificacion_comparacion", ""),
             "organismo_propuesto": classification.get("organismo_propuesto", "Unidad gestora del buzon (pendiente de asignacion)"),
             "nivel_urgencia": classification.get("nivel_urgencia", "media"),
-            "texto_desidentificado": text,
-            "resultado_esperado_desidentificado": expected_result,
         }
     except (ValueError, json.JSONDecodeError):
         # Fallback conservador: se marca para revision humana en vez de perder el registro.
-        return {
-            "categoria_principal": "Competencia por confirmar",
-            "subcategoria": "",
-            "categoria_llm": "Competencia por confirmar",
-            "subcategoria_llm": "",
-            "categoria_usuario": user_category,
-            "subcategoria_usuario": user_subcategories,
-            "decision_comparacion": "llm",
-            "justificacion_comparacion": "No se pudo comparar la clasificacion del usuario con la del modelo.",
-            "organismo_propuesto": "Unidad gestora del buzon (pendiente de asignacion)",
-            "nivel_urgencia": "media",
-            "texto_desidentificado": text,
-            "resultado_esperado_desidentificado": expected_result,
-        }
+        return fallback
 
 
 def fetch_records(query: str) -> pd.DataFrame:
@@ -537,6 +452,8 @@ def mark_as_processed(ids: list) -> None:
 
 
 def sanitize_one_with_llm(text: str, field_name: str) -> str:
+    if not text.strip():
+        return text
     protected_text, protected_addresses = protect_addresses(text)
     sanitized_text, _ = sanitize_text(protected_text)
     try:
@@ -551,7 +468,6 @@ def sanitize_one_with_llm(text: str, field_name: str) -> str:
             marker in lowered
             for marker in (
                 "categoria_principal",
-                "decision_comparacion",
                 "organismo_propuesto",
                 "respuesta:",
                 "no puedo",
@@ -566,116 +482,55 @@ def sanitize_one_with_llm(text: str, field_name: str) -> str:
         return restore_addresses(sanitized_text, protected_addresses)
 
 
-def sanitize_with_llm(text: str, expected_result: str) -> tuple[str, str, bool]:
-    _, text_personal_data_found = redact_pii(text)
-    _, expected_personal_data_found = redact_pii(expected_result)
+def sanitize_with_llm(text: str, expected_result: str) -> tuple[str, str]:
     sanitized_text = sanitize_one_with_llm(text, "texto de la sugerencia")
     sanitized_expected = sanitize_one_with_llm(
         expected_result, "resultado esperado"
     )
-    return (
-        sanitized_text,
-        sanitized_expected,
-        text_personal_data_found or expected_personal_data_found,
-    )
+    return sanitized_text, sanitized_expected
 
 
 def process_records(df: pd.DataFrame, text_column: str) -> dict:
     if text_column not in df.columns:
         raise ValueError(f"La columna '{text_column}' no existe. Columnas disponibles: {list(df.columns)}")
 
-    now = datetime.now(timezone.utc).isoformat()
     records = []
 
     for _, row in df.iterrows():
-        original_text = str(row[text_column])
         pre_redacted = str(row[text_column])
         expected_result_value = row.get(COLUMNA_RESULTADO_ESPERADO, "")
         expected_result = "" if pd.isna(expected_result_value) else str(expected_result_value)
-        pre_redacted, redacted_expected_result, privacy_found = sanitize_with_llm(
+        pre_redacted, redacted_expected_result = sanitize_with_llm(
             pre_redacted, expected_result
         )
-        privacy_review = request_boolean_flag(
-            build_privacy_review_prompt(
-                original_text,
-                pre_redacted,
-                expected_result,
-                redacted_expected_result,
-            ),
-            "requiere_revision_privacidad",
-            privacy_found,
-        ) or privacy_found
         text_keywords, suggestion_keywords = request_keywords(
             pre_redacted,
             redacted_expected_result,
         )
-        user_category = row.get(COLUMNA_CATEGORIA_USUARIO, "")
-        user_subcategories = row.get(COLUMNA_SUBCATEGORIAS_USUARIO, "")
-        user_category = "" if pd.isna(user_category) else str(user_category).strip()
-        user_subcategories = "" if pd.isna(user_subcategories) else str(user_subcategories).strip()
         emergency = is_emergency(pre_redacted)
 
         if emergency:
             record = {
-                "categoria_principal": "Seguridad ciudadana",
-                "subcategoria": "Alerta de emergencia",
                 "organismo_propuesto": "Canal de emergencias (112) - no se procesa como sugerencia ordinaria",
                 "nivel_urgencia": "alta",
-                "texto_desidentificado": pre_redacted,
                 "categoria_llm": "Seguridad",
                 "subcategoria_llm": "",
-                "categoria_usuario": user_category,
-                "subcategoria_usuario": normalize_subcategories(user_subcategories, user_category),
-                "decision_comparacion": "llm",
-                "justificacion_comparacion": "La comunicación se ha escalado por emergencia.",
             }
-            estado = "escalado_emergencia"
-            accion = "Mostrado canal de emergencia al ciudadano; alerta priorizada para revision humana"
         else:
-            record = classify_text(
-                pre_redacted,
-                user_category,
-                user_subcategories,
-                redacted_expected_result,
-            )
-            estado = "pendiente_revision"
-            accion = ""
-
-        user_subcategory_set = {
-            value.strip()
-            for value in record["subcategoria_usuario"].split(";")
-            if value.strip()
-        }
-        llm_subcategory_set = {
-            value.strip()
-            for value in record["subcategoria_llm"].split(";")
-            if value.strip()
-        }
-        categories_differ = (
-            record["categoria_usuario"] != record["categoria_llm"]
-            or not user_subcategory_set.issubset(llm_subcategory_set)
-        )
-        classification_mismatch = categories_differ
+            record = classify_text(pre_redacted)
 
         records.append({
             "categoria_llm": record["categoria_llm"],
             "subcategoria_llm": record["subcategoria_llm"],
-            "categoria_usuario": record["categoria_usuario"],
-            "subcategoria_usuario": record["subcategoria_usuario"],
-            "decision_comparacion": record["decision_comparacion"],
-            "justificacion_comparacion": record["justificacion_comparacion"],
             "organismo_propuesto": record["organismo_propuesto"],
-            "organismo_confirmado": "",
             "nivel_urgencia": record["nivel_urgencia"],
-            "texto_desidentificado": record["texto_desidentificado"],
+            "texto_desidentificado": pre_redacted,
             "resultado_esperado_desidentificado": redacted_expected_result,
-            "requiere_revision_privacidad": privacy_review,
-            "discordancia_clasificacion": classification_mismatch,
             "palabras_clave_texto": text_keywords,
             "palabras_clave_sugerencia": suggestion_keywords,
         })
 
-    nivel_b = pd.DataFrame(records)
+    nivel_b = pd.DataFrame(records, columns=CSV_COLUMNS)
 
     output_dir = OUTPUT_DIR / datetime.now().strftime("%Y%m%d_%H%M%S")
     output_dir.mkdir(parents=True, exist_ok=True)
