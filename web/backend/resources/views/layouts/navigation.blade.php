@@ -15,9 +15,11 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('admin.sugerencias.index')" :active="request()->routeIs('sugerencias.index')">
-                        {{ __('Sugerencias') }}
-                    </x-nav-link>
+                    @can('revisar-sugerencias')
+                        <x-nav-link :href="route('admin.sugerencias.index')" :active="request()->routeIs('admin.sugerencias.*')">
+                            {{ __('Sugerencias') }}
+                        </x-nav-link>
+                    @endcan
                 </div>
             </div>
 
@@ -73,6 +75,11 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
+            @can('revisar-sugerencias')
+                <x-responsive-nav-link :href="route('admin.sugerencias.index')" :active="request()->routeIs('admin.sugerencias.*')">
+                    {{ __('Sugerencias') }}
+                </x-responsive-nav-link>
+            @endcan
         </div>
 
         <!-- Responsive Settings Options -->
