@@ -44,8 +44,8 @@ SELECT D.{COLUMNA_ID},D.{COLUMNA_SUGERENCIA_ID},D.{COLUMNA_TEXTO},
 D.{COLUMNA_RESULTADO_ESPERADO},D.{COLUMNA_ESTADO}
 FROM {TABLA_COMUNICACIONES} AS D
 WHERE D.{COLUMNA_ESTADO}=0
-ORDER BY D.{COLUMNA_ID} ASC
-LIMIT 2;
+ORDER BY D.{COLUMNA_ID} DESC
+LIMIT 1;
 """
 
 # Categorias y subcategorias disponibles en las tablas de la base de datos.
@@ -428,28 +428,40 @@ def save_results(records: list[dict]) -> None:
             insert_values = []
             for record in records:
                 category = record["categoria_llm"]
-                if category not in category_ids:
-                    raise ValueError(f"No existe la categoria '{category}' en la tabla categorias.")
+                category_id = category_ids.get(category)
+                if category_id is None:
+                    print(
+                        f"Aviso: no existe la categoria '{category}' en la tabla "
+                        "categorias; se insertara categoria_id como NULL."
+                    )
                 subcategories = [
                     name.strip()
                     for name in record["subcategoria_llm"].split(";")
                     if name.strip()
                 ]
-                category_id = category_ids[category]
 
                 def resolve_subcategory_id(name: str) -> object:
                     candidates = subcategory_ids_by_category.get((category_id, name))
                     if not candidates:
                         candidates = subcategory_ids_by_name.get(name, set())
                     if len(candidates) != 1:
-                        raise ValueError(
-                            f"No se puede resolver de forma unica la subcategoria "
-                            f"'{name}' para la categoria '{category}'."
+                        print(
+                            f"Aviso: no se puede resolver de forma unica la subcategoria "
+                            f"'{name}' para la categoria '{category}'; se insertara como NULL."
                         )
+                        return None
                     return next(iter(candidates))
 
-                subcategory_1_id = resolve_subcategory_id(subcategories[0]) if subcategories else None
-                subcategory_2_id = resolve_subcategory_id(subcategories[1]) if len(subcategories) > 1 else None
+                subcategory_1_id = (
+                    resolve_subcategory_id(subcategories[0])
+                    if category_id is not None and subcategories
+                    else None
+                )
+                subcategory_2_id = (
+                    resolve_subcategory_id(subcategories[1])
+                    if category_id is not None and len(subcategories) > 1
+                    else None
+                )
                 insert_values.append((
                     record["sugerencia_id"],
                     category_id,
@@ -457,7 +469,12 @@ def save_results(records: list[dict]) -> None:
                     subcategory_2_id,
                     record["nivel_urgencia"],
                     record["texto_desidentificado"],
-                    record["propuesta_desidentificada"],
+                    (
+                        record["propuesta_desidentificada"]
+                        if record["propuesta_desidentificada"] is not None
+                        and str(record["propuesta_desidentificada"]).strip()
+                        else None
+                    ),
                 ))
 
             cursor.executemany(insert_sql, insert_values)
@@ -485,18 +502,29 @@ def sanitize_with_llm(text: str, expected_result: str) -> tuple[str, str]:
     sanitized_expected, _ = sanitize_text(protected_expected)
 
     try:
+        if sanitized_expected.strip():
+            privacy_prompt = build_privacy_prompt(
+                sanitized_text,
+                "texto de la sugerencia",
+                expected_result=sanitized_expected,
+            )
+        else:
+            privacy_prompt = build_privacy_prompt(
+                sanitized_text,
+                "texto de la sugerencia",
+            )
         data = parse_model_json(
             generate_response(
-                build_privacy_prompt(
-                    sanitized_text,
-                    "texto de la sugerencia",
-                    expected_result=sanitized_expected,
-                ),
+                privacy_prompt,
                 max_new_tokens=512,
             )
         )
         candidate_text = data.get("texto_saneado")
-        candidate_expected = data.get("propuesta_saneada")
+        candidate_expected = (
+            data.get("propuesta_saneada", "")
+            if sanitized_expected.strip()
+            else ""
+        )
         if (
             not isinstance(candidate_text, str)
             or (sanitized_text.strip() and not candidate_text.strip())
