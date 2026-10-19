@@ -195,7 +195,7 @@ python -m src.classification.pipeline --input data/samples/raw_input.json --outp
 
 ---
 
-## 🛡️ Governance & Safeguards
+## Governance & Safeguards
 
 Before deployment, the system adheres to strict operational rules:
 - **Human-in-the-Loop:** Automated scripts assist consistency, but final agency derivation and public release *must* be approved by human reviewers.
@@ -204,7 +204,7 @@ Before deployment, the system adheres to strict operational rules:
 
 ---
 
-## 📚 References
+## References
 
 - **Agencia Española de Protección de Datos (AEPD):** [Anonymization and Pseudonymization Guidelines (2021)](https://www.aepd.es/prensa-y-comunicacion/blog/anonimizacion-y-seudonimizacion)
 - **Ciudad Autónoma de Ceuta:** [Autonomy Statute & Competences](https://www.ceuta.es/ceuta/la-institucion/normativa/45-paginas/paginas/estatuto-de-autonomia/11-titulo-ii-de-las-competencias-de-la-ciudad-de-ceuta)
