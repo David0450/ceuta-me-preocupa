@@ -1,0 +1,6 @@
+accelerate
+bitsandbytes
+pandas
+PyMySQL
+torch
+transformers
