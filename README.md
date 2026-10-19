@@ -10,7 +10,7 @@ This repository contains the codebase, classification scripts, data pipeline too
 
 ---
 
-## 📌 Table of Contents
+## Table of Contents
 - [Overview & Objectives](#-overview--objectives)
 - [System Boundaries & Explicit Limitations](#-system-boundaries--explicit-limitations)
 - [Data Architecture & Privacy Model](#-data-architecture--privacy-model)
@@ -24,7 +24,7 @@ This repository contains the codebase, classification scripts, data pipeline too
 
 ---
 
-## 🎯 Overview & Objectives
+## Overview & Objectives
 
 During emergency and transitional situations in Ceuta, effective citizen communication channels are crucial. The main goals of this system are:
 1. **Identify Patterns:** Aggregating citizen inputs to identify widespread urban, social, and infrastructure issues.
@@ -33,7 +33,7 @@ During emergency and transitional situations in Ceuta, effective citizen communi
 
 ---
 
-## 🚨 System Boundaries & Explicit Limitations
+## System Boundaries & Explicit Limitations
 
 To manage expectations and avoid procedural misunderstandings, the platform explicitly enforces three boundaries at the user interface level:
 
@@ -43,7 +43,7 @@ To manage expectations and avoid procedural misunderstandings, the platform expl
 
 ---
 
-## 🔒 Data Architecture & Privacy Model
+## Data Architecture & Privacy Model
 
 In compliance with the **Spanish Data Protection Agency (AEPD)** recommendations regarding anonymization vs. pseudonymization, the application strictly separates data into **three distinct tiers**:
 
@@ -57,7 +57,7 @@ In compliance with the **Spanish Data Protection Agency (AEPD)** recommendations
 
 ---
 
-## 🗂️ Category & Agency Routing Matrix
+## Category & Agency Routing Matrix
 
 Submissions are assigned to a primary competent entity within either the **Autonomous City of Ceuta** or the **General State Administration (AGE)**:
 
@@ -77,7 +77,7 @@ Submissions are assigned to a primary competent entity within either the **Auton
 
 ---
 
-## ⚙️ Data Pipeline & Processing Workflow
+## Data Pipeline & Processing Workflow
 
 The processing engine follows a strict multi-step workflow executed via Python scripts and human oversight:
 
@@ -120,7 +120,7 @@ The processing engine follows a strict multi-step workflow executed via Python s
 
 ---
 
-## 📋 Data Fields & Schema (Level B Register)
+## Data Fields & Schema (Level B Register)
 
 Every processed entry in the Level B working register requires the following mandatory fields:
 
@@ -140,7 +140,7 @@ Every processed entry in the Level B working register requires the following man
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```text
 ceuta-me-preocupa/
@@ -160,7 +160,7 @@ ceuta-me-preocupa/
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - Python 3.10 or higher
