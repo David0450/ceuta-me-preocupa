@@ -1,6 +1,7 @@
 # Ceuta Me Preocupa
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.md)
+[![Tests](https://github.com/David0450/ceuta-me-preocupa/actions/workflows/tests.yml/badge.svg)](https://github.com/David0450/ceuta-me-preocupa/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.txt)
 [![PHP](https://img.shields.io/badge/PHP-8.2%2B-777bb4)](https://www.php.net/)
 [![Laravel](https://img.shields.io/badge/Laravel-12-ff2d20)](https://laravel.com/)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776ab)](https://www.python.org/)
@@ -11,7 +12,8 @@ The project is developed at the **Cátedra Ceuta-IATEB** (Artificial Intelligenc
 
 Live site: <https://ceutamepreocupa.es>
 
-<!-- TODO: authors, ORCID and contact e-mail before submitting the paper -->
+**Authors:** David Jesús Peral Sánchez (web application) and Adrián Romero Olmedo (AI pipeline), Cátedra Ceuta-IATEB, Universidad de Granada.
+<!-- TODO: ORCID iDs and contact e-mail -->
 
 ---
 
@@ -28,6 +30,7 @@ Live site: <https://ceutamepreocupa.es>
 - [Running the AI pipeline](#running-the-ai-pipeline)
 - [Tests](#tests)
 - [Current limitations](#current-limitations)
+- [How to cite](#how-to-cite)
 - [License](#license)
 
 ---
@@ -143,7 +146,7 @@ class node_citizen,node_public_body toneIndigo
 |---|---|---|
 | Web application (form, review panel, metrics) | [`web/backend`](web/backend) | PHP 8.2, Laravel 12, Laravel Breeze (Blade), Livewire 4, Tailwind CSS, Vite |
 | AI pipeline | [`ai`](ai) | Python 3.10+, PyTorch, Hugging Face Transformers, bitsandbytes (4-bit), pandas, PyMySQL |
-| Static landing page (first version) | [`web`](web) | HTML, CSS, JavaScript |
+| Static landing page (first version, superseded by the Laravel app) | [`web/legacy-landing`](web/legacy-landing) | HTML, CSS, JavaScript |
  
 The language model runs on infrastructure controlled by the project (the Universidad de Granada supercomputer), so citizen texts are not sent to third-party AI services.
  
@@ -228,9 +231,9 @@ ceuta-me-preocupa/
 │   │   ├── resources/views/     # Blade views and Livewire single-file components
 │   │   ├── routes/web.php
 │   │   └── tests/
-│   ├── index.html, styles.css, script.js   # Static landing page (first version)
+│   ├── legacy-landing/          # Static landing page (first version, no longer deployed)
 │   └── Protocolo del buzón virtual ciudadano de Ceuta.docx / .txt
-├── LICENSE.md
+├── LICENSE.txt
 └── README.md
 ```
 
@@ -306,6 +309,8 @@ cd web/backend
 composer test
 ```
 
+The tests run against an in-memory SQLite database, so no MySQL server is needed. They also run automatically on every push and pull request through GitHub Actions.
+
 The suite includes unit tests for the personal-data detector (`tests/Unit/DetectorDatosPersonalesTest.php`) and feature tests for the review workflow and authentication.
 
 ---
@@ -319,6 +324,12 @@ The suite includes unit tests for the personal-data detector (`tests/Unit/Detect
 
 ---
 
+## How to cite
+
+If you use this software, please cite it using the metadata in [`CITATION.cff`](CITATION.cff) (GitHub shows a *Cite this repository* button).
+
+---
+
 ## License
 
-The source code is released under the [MIT License](LICENSE.md).
+The source code is released under the [MIT License](LICENSE.txt).
