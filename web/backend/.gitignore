@@ -25,3 +25,8 @@ Thumbs.db
 /.cursor
 /.claude
 AGENTS.md
+
+# Local AI-assistant tooling (not part of the application)
+CLAUDE.md
+.mcp.json
+boost.json

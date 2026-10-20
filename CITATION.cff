@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using these metadata."
+title: "Ceuta Me Preocupa: a privacy-preserving citizen mailbox with AI-assisted de-identification and classification"
+type: software
+authors:
+  - family-names: "Peral Sánchez"
+    given-names: "David Jesús"
+    affiliation: "Cátedra Ceuta-IATEB, Universidad de Granada"
+  - family-names: "Romero Olmedo"
+    given-names: "Adrián"
+    affiliation: "Cátedra Ceuta-IATEB, Universidad de Granada"
+repository-code: "https://github.com/David0450/ceuta-me-preocupa"
+url: "https://ceutamepreocupa.es"
+license: MIT
+version: "2.0.0"
+date-released: "2026-10-20"
+keywords:
+  - citizen participation
+  - e-government
+  - de-identification
+  - text classification
+  - large language models
+  - Laravel
