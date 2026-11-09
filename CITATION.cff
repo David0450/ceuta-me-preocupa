@@ -11,6 +11,7 @@ authors:
     affiliation: "Cátedra Ceuta-IATEB, Universidad de Granada"
 repository-code: "https://github.com/David0450/ceuta-me-preocupa"
 url: "https://ceutamepreocupa.es/buzon"
+doi: "https://doi.org/10.5281/zenodo.24082092"
 license: MIT
 abstract: >-
   Ceuta Me Preocupa is a virtual citizen mailbox for the Autonomous City of
