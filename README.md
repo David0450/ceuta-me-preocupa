@@ -10,7 +10,7 @@
 
 The project is developed at the **Cátedra Ceuta-IATEB** (Artificial Intelligence and Emerging Technologies for Well-being), a joint initiative of the Universidad de Granada and the Ciudad Autónoma de Ceuta. It follows the internal *Protocolo del buzón virtual ciudadano de Ceuta*, included in [`web/`](web/).
 
-Live site: <https://ceutamepreocupa.es> · Current version: **2.0.0** (see [`CHANGELOG.md`](CHANGELOG.md))
+Live site: <https://ceutamepreocupa.es/buzon>
 
 **Authors:** David Jesús Peral Sánchez (web application) and Adrián Romero Olmedo (AI pipeline), Cátedra Ceuta-IATEB, Universidad de Granada.
 <!-- TODO: ORCID iDs and contact e-mail -->
