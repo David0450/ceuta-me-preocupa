@@ -17,6 +17,10 @@ class DatoOriginal extends Model
         'zona_origen',
     ];
 
+    protected $casts = [
+        'procesado' => 'boolean',
+    ];
+
     public function sugerencia(): BelongsTo
     {
         return $this->belongsTo(Sugerencia::class);

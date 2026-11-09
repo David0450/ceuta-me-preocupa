@@ -10,7 +10,7 @@
 
 The project is developed at the **Cátedra Ceuta-IATEB** (Artificial Intelligence and Emerging Technologies for Well-being), a joint initiative of the Universidad de Granada and the Ciudad Autónoma de Ceuta. It follows the internal *Protocolo del buzón virtual ciudadano de Ceuta*, included in [`web/`](web/).
 
-Live site: <https://ceutamepreocupa.es>
+Live site: <https://ceutamepreocupa.es> · Current version: **2.0.0** (see [`CHANGELOG.md`](CHANGELOG.md))
 
 **Authors:** David Jesús Peral Sánchez (web application) and Adrián Romero Olmedo (AI pipeline), Cátedra Ceuta-IATEB, Universidad de Granada.
 <!-- TODO: ORCID iDs and contact e-mail -->
@@ -148,7 +148,7 @@ class node_citizen,node_public_body toneIndigo
 | AI pipeline | [`ai`](ai) | Python 3.10+, PyTorch, Hugging Face Transformers, bitsandbytes (4-bit), pandas, PyMySQL |
 | Static landing page (first version, superseded by the Laravel app) | [`web/legacy-landing`](web/legacy-landing) | HTML, CSS, JavaScript |
  
-The language model runs on infrastructure controlled by the project (the Universidad de Granada supercomputer), so citizen texts are not sent to third-party AI services.
+The language model runs locally on hardware operated by the project team, so citizen texts are never sent to third-party AI services. Any machine with a CUDA GPU of about 8 GB of VRAM can run it.
  
 ---
 
@@ -165,7 +165,7 @@ The protocol distinguishes three levels of data. They are separated logically wi
 
 De-identification combines three layers:
 
-- **Regex detection** of DNI, NIE, IBAN, e-mail addresses, Spanish phone numbers and street addresses ([`DetectorDatosPersonales`](web/backend/app/Support/DetectorDatosPersonales.php) in the web app, and an equivalent step in the pipeline), replaced with `[dato personal eliminado]`.
+- **Regex detection** of direct identifiers, replaced with `[dato personal eliminado]`. The AI pipeline removes DNI, NIE, e-mail addresses and phone numbers, and masks offensive language; it keeps street addresses, because they are usually needed to locate the problem. In the review panel, [`DetectorDatosPersonales`](web/backend/app/Support/DetectorDatosPersonales.php) also highlights DNI, NIE, IBAN, e-mail addresses, phone numbers and street addresses so that the reviewer can decide what to remove.
 - **LLM rewriting** to remove indirect identifiers the patterns miss.
 - **Human review**: a submission cannot advance until a reviewer has confirmed the de-identified text.
 
@@ -180,7 +180,7 @@ Main tables (see [`web/backend/database/migrations`](web/backend/database/migrat
 | Table | Purpose |
 |---|---|
 | `sugerencias` | Working record: reception date, category chosen by the citizen and current category, competent body, `estado` (`recibido`, `en_revision`, `clasificado`, `derivado`, `cerrado`), `nivel_urgencia` (`ordinaria`, `prioritaria`, `urgente`), de-identified texts, review stamps, `duplicado_de_id`, action taken, soft delete |
-| `datos_originales` | Level A, 1:1 with `sugerencias`: original text, expected outcome, suggested body, area |
+| `datos_originales` | Level A, 1:1 with `sugerencias`: original text, expected outcome, suggested body, area, and the `procesado` flag used by the AI pipeline |
 | `contactos` | Level A, 1:1 with `sugerencias`: encrypted contact channel and consent |
 | `propuestas_ia` | Proposals written by the AI pipeline, plus the reviewer's verdict on each field (used to measure model accuracy) |
 | `historial_sugerencias` | Audit log of every change made by reviewers |
@@ -216,9 +216,11 @@ Each submission is routed to a body of the Autonomous City or of the General Sta
 
 ```text
 ceuta-me-preocupa/
+├── .github/workflows/tests.yml  # CI: web and AI test suites
 ├── ai/
 │   ├── qwen_chat.py             # AI pipeline: de-identification, emergency check, classification
 │   ├── db_config.example.py     # Database settings template (copy to db_config.py)
+│   ├── tests/                   # Pipeline tests (no GPU needed)
 │   └── requirements.txt
 ├── web/
 │   ├── backend/                 # Laravel application
@@ -233,6 +235,8 @@ ceuta-me-preocupa/
 │   │   └── tests/
 │   ├── legacy-landing/          # Static landing page (first version, no longer deployed)
 │   └── Protocolo del buzón virtual ciudadano de Ceuta.docx / .txt
+├── CHANGELOG.md
+├── CITATION.cff
 ├── LICENSE.txt
 └── README.md
 ```
@@ -296,7 +300,7 @@ cd ai
 python qwen_chat.py
 ```
 
-Each run takes the most recent unprocessed row from `datos_originales`, de-identifies the text and the expected outcome, checks it for emergency keywords, asks the model for a category, subcategories and urgency, writes the result to `propuestas_ia` and marks the source row as processed. The proposal then appears in the review panel for a human to confirm or correct.
+Each run takes the most recent unprocessed row from `datos_originales` (`procesado = 0`), de-identifies the text and the expected outcome, checks it for emergency keywords, asks the model for a category, subcategories and urgency (`ordinaria`, `prioritaria` or `urgente`), writes the result to `propuestas_ia` and sets `procesado = 1`, all in one transaction. Values that are not in the taxonomy are discarded, and anything the model cannot classify is marked *Competencia por confirmar*. The proposal then appears in the review panel for a human to confirm or correct.
 
 Column and table names are configured at the top of `qwen_chat.py` and in `db_config.py`.
 
@@ -304,20 +308,34 @@ Column and table names are configured at the top of `qwen_chat.py` and in `db_co
 
 ## Tests
 
+Web application:
+
 ```bash
 cd web/backend
 composer test
 ```
 
-The tests run against an in-memory SQLite database, so no MySQL server is needed. They also run automatically on every push and pull request through GitHub Actions.
+The tests run against an in-memory SQLite database, so no MySQL server is needed. The suite includes unit tests for the personal-data detector (`tests/Unit/DetectorDatosPersonalesTest.php`) and feature tests for the review workflow and authentication.
 
-The suite includes unit tests for the personal-data detector (`tests/Unit/DetectorDatosPersonalesTest.php`) and feature tests for the review workflow and authentication.
+AI pipeline:
+
+```bash
+cd ai
+pip install pytest
+python -m pytest tests
+```
+
+These tests replace the model, PyTorch and the database with stand-ins, so they need neither a GPU nor `requirements.txt`. They cover de-identification, emergency detection, the urgency values, and how the pipeline handles invalid or malformed model answers.
+
+Both suites run automatically on every push and pull request through GitHub Actions.
 
 ---
 
 ## Current limitations
 
 - The AI pipeline processes one submission per run and is started manually; it is not yet scheduled.
+- The AI pipeline does not yet propose the competent public body: reviewers assign it in the panel.
+- Submissions flagged as emergencies skip the classifier and are proposed as *Seguridad* with `urgente` priority for a reviewer to check.
 - Emergency detection is keyword-based and only raises priority: it does not replace the warning on the form that the mailbox is not an emergency channel.
 - The model is used through prompting; the fine-tuned version is in progress.
 - The public metrics show counts per category only; the monthly transparency reports described in the protocol are not generated by the software yet.
