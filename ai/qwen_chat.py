@@ -102,6 +102,16 @@ TAXONOMIA = [
 ]
 VALID_CATEGORIES = {category for category, _ in TAXONOMIA}
 
+# Mismos valores que sugerencias.nivel_urgencia en la aplicacion web.
+URGENCIA_POR_DEFECTO = "ordinaria"
+NIVELES_URGENCIA = {"ordinaria", "prioritaria", "urgente"}
+
+
+def normalize_urgency(value: object) -> str:
+    """Devuelve un nivel de urgencia valido para la web; si no, el ordinario."""
+    level = str(value or "").strip().lower()
+    return level if level in NIVELES_URGENCIA else URGENCIA_POR_DEFECTO
+
 EMERGENCY_KEYWORDS = [
     "emergencia", "riesgo vital", "peligro de muerte", "violencia", "agresion",
     "arma", "suicidio", "menor en riesgo", "maltrato", "abuso", "incendio",
@@ -330,7 +340,7 @@ def classify_text(
     fallback = {
         "categoria_llm": "Competencia por confirmar",
         "subcategoria_llm": "",
-        "nivel_urgencia": "media",
+        "nivel_urgencia": URGENCIA_POR_DEFECTO,
     }
     if not text.strip():
         return fallback
@@ -349,7 +359,7 @@ def classify_text(
         return {
             "categoria_llm": llm_category,
             "subcategoria_llm": llm_subcategories,
-            "nivel_urgencia": classification.get("nivel_urgencia", "media"),
+            "nivel_urgencia": normalize_urgency(classification.get("nivel_urgencia")),
         }
     except (ValueError, json.JSONDecodeError):
         # Fallback conservador: se marca para revision humana en vez de perder el registro.
@@ -410,12 +420,7 @@ def save_results(records: list[dict]) -> None:
             cursor.execute("SELECT `id`, `nombre` FROM `categorias`")
             category_ids = {name: identifier for identifier, name in cursor.fetchall()}
             cursor.execute(
-                "SELECT DISTINCT SU.`id`, SU.`nombre`, S.`categoria_id` "
-                "FROM `subcategorias` AS SU "
-                "INNER JOIN `sugerencia_subcategoria` AS SB "
-                "ON SB.`subcategoria_id` = SU.`id` "
-                "INNER JOIN `sugerencias` AS S "
-                "ON S.`id` = SB.`sugerencia_id`"
+                "SELECT `id`, `nombre`, `categoria_id` FROM `subcategorias`"
             )
             subcategory_ids_by_category: dict[tuple[object, str], set[object]] = {}
             subcategory_ids_by_name: dict[str, set[object]] = {}
@@ -585,7 +590,7 @@ def process_records(df: pd.DataFrame, text_column: str) -> dict:
 
         if emergency:
             record = {
-                "nivel_urgencia": "alta",
+                "nivel_urgencia": "urgente",
                 "categoria_llm": "Seguridad",
                 "subcategoria_llm": "",
             }

@@ -11,3 +11,4 @@ ficheros_analizados/
 salida_buzon/
 
 protocolo.txt
+.pytest_cache/

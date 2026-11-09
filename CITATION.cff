@@ -12,8 +12,17 @@ authors:
 repository-code: "https://github.com/David0450/ceuta-me-preocupa"
 url: "https://ceutamepreocupa.es"
 license: MIT
+abstract: >-
+  Ceuta Me Preocupa is a virtual citizen mailbox for the Autonomous City of
+  Ceuta (Spain). A Laravel web application collects concerns and improvement
+  proposals, keeps personal data apart from the working record and gives
+  authorised reviewers a panel to confirm, correct and route each submission
+  to the competent public body. A Python pipeline running a locally hosted
+  large language model (Qwen3-8B) proposes a de-identified text, a category,
+  subcategories and an urgency level, which are always checked by a human
+  reviewer.
 version: "2.0.0"
-date-released: "2026-10-20"
+date-released: "2026-11-09"
 keywords:
   - citizen participation
   - e-government
