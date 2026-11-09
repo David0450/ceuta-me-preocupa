@@ -5,6 +5,7 @@
 [![PHP](https://img.shields.io/badge/PHP-8.2%2B-777bb4)](https://www.php.net/)
 [![Laravel](https://img.shields.io/badge/Laravel-12-ff2d20)](https://laravel.com/)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776ab)](https://www.python.org/)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24081619.svg)](https://doi.org/10.5281/zenodo.24081619)
 
 **Ceuta Me Preocupa** ("Ceuta concerns me") is a virtual citizen mailbox for the Autonomous City of Ceuta (Spain). Citizens submit non-urgent concerns and improvement proposals through a web form; the system stores them with personal data separated from the working record, uses a locally hosted language model to propose a de-identified text, a category and an urgency level, and gives a team of human reviewers a panel to confirm, correct and route each submission to the competent public body.
 
