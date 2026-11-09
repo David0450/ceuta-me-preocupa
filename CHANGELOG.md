@@ -7,6 +7,12 @@ and the project follows [Semantic Versioning](https://semver.org/).
 Versions 1.x were released from the web application's own repository and are
 tagged here as `web-v1.x`. Version 2.0.0 is the first release of the monorepo.
 
+## [2.0.1] - 2026-11-09
+
+### Fixed
+- Release 2.0.0 was tagged on an earlier commit by mistake and does not
+  contain the changes listed below. Version 2.0.1 contains them.
+
 ## [2.0.0] - 2026-11-09
 
 ### Added
@@ -66,6 +72,7 @@ tagged here as `web-v1.x`. Version 2.0.0 is the first release of the monorepo.
   personal data into restricted tables, encrypted contact channel and a
   login-protected admin area.
 
+[2.0.1]: https://github.com/David0450/ceuta-me-preocupa/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/David0450/ceuta-me-preocupa/compare/web-v1.2...v2.0.0
 [1.2.0]: https://github.com/David0450/ceuta-me-preocupa/compare/web-v1.1.1...web-v1.2
 [1.1.1]: https://github.com/David0450/ceuta-me-preocupa/compare/web-v1.1...web-v1.1.1
